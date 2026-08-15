@@ -12,7 +12,8 @@
     "test:watch": "jest --watch",
     "db:types": "supabase gen types typescript --local > src/lib/supabase/types.ts",
     "prepare": "husky",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "verify": "npm run typecheck && npm run lint && npm test"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

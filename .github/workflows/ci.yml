@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # typecheck must run alongside the tests, not instead of them. The
+      # @ts-expect-error assertions in src/lib/questions/__tests__/types.test.ts
+      # are invisible to Jest — they only fail here. Dropping this step would
+      # silently stop checking half that file.
+      #
+      # `verify` runs typecheck, lint, and the unit suite.
+      - run: npm run verify
+
+  # Integration tests need a real Postgres, so they run separately against a
+  # Supabase stack rather than being folded into `verify`.
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - run: npm ci
+
+      - name: Start Supabase
+        run: supabase start
+
+      # Deliberately not gating on `supabase db reset`'s exit code — it is
+      # flaky (a 502 at the container-restart step) even when every migration
+      # applied fine. `supabase start` already runs the migrations; the step
+      # below asserts on database state instead, which is the real check.
+      - name: Assert reference data landed
+        run: |
+          COUNT=$(supabase db execute --query "select count(*) from subteams;" 2>/dev/null | grep -oE '[0-9]+' | tail -1)
+          echo "subteams=$COUNT"
+          test "$COUNT" = "12"
+
+      - name: Write test env
+        run: |
+          echo "NEXT_PUBLIC_SUPABASE_URL=$(supabase status -o env | grep '^API_URL=' | cut -d= -f2- | tr -d '\"')" >> .env.local
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(supabase status -o env | grep '^ANON_KEY=' | cut -d= -f2- | tr -d '\"')" >> .env.local
+          echo "SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o env | grep '^SERVICE_ROLE_KEY=' | cut -d= -f2- | tr -d '\"')" >> .env.local
+
+      - run: npm run test:integration
