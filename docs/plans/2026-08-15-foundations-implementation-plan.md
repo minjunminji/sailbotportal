@@ -1647,7 +1647,14 @@ export async function updateSession(request: NextRequest) {
 }
 ```
 
-**Step 2: Middleware** — `src/middleware.ts`
+> **Next 16 renamed this file convention from `middleware` to `proxy`.** The actual file is
+> `src/proxy.ts` exporting `proxy`, not `src/middleware.ts` exporting `middleware`. Semantics are
+> identical; the one behavioural difference is that `proxy` always runs on the Node runtime rather
+> than Edge, which suits `@supabase/ssr`. The Supabase helper below keeps the `middleware.ts` name
+> because that matches Supabase's own documentation. Confirm via the build output, which lists
+> `ƒ Proxy (Middleware)`.
+
+**Step 2: Proxy** — `src/proxy.ts`
 
 ```ts
 import { NextResponse, type NextRequest } from 'next/server';
@@ -1776,9 +1783,17 @@ git commit -m "Add route skeleton with cached public postings list"
 
 ## Definition of done
 
+> **Use `npm run typecheck`, not bare `npx tsc --noEmit`.** Next 16 generates the `PageProps` and
+> `LayoutProps` global types into `.next/types`, so a bare `tsc` run on a fresh clone fails with
+> five confusing `TS2304: Cannot find name 'PageProps'` errors that look like broken code. The
+> `typecheck` script runs `next typegen` first, which generates those types without a full build.
+
 - [ ] `npm run build` passes clean
+- [ ] `npm run typecheck` passes **from a clean checkout with no `.next` directory**
 - [ ] `npm test` passes
 - [ ] `npm run test:integration` passes against a local Supabase
+- [ ] The integration suite leaves no fixture residue — after a run, `select count(*) from teams
+      where slug like 'test-%'` returns 0, so no phantom teams appear on the public home page
 - [ ] A lead cannot read another team's applications — proven by test, not by inspection
 - [ ] The home page renders correctly with `FREDB_API_KEY` blank
 - [ ] `/admin` redirects to `/login` when signed out

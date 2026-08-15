@@ -1,16 +1,10 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
+// No webfont on purpose. The system stack is the deliberate placeholder until a
+// designer picks type — see the UI base section of the design doc. The scaffold
+// loaded Geist here but never applied it to anything, so it was a build-time
+// dependency on Google Fonts that bought nothing and could fail a CI build.
 
 export const metadata: Metadata = {
   title: 'Sailbot Hiring Portal',
@@ -19,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

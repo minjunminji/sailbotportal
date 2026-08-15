@@ -11,7 +11,8 @@
     "test:integration": "jest --testMatch \"**/*.integration.test.ts\"",
     "test:watch": "jest --watch",
     "db:types": "supabase gen types typescript --local > src/lib/supabase/types.ts",
-    "prepare": "husky"
+    "prepare": "husky",
+    "typecheck": "next typegen && tsc --noEmit"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

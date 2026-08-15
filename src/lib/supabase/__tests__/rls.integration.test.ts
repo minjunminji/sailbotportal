@@ -190,6 +190,12 @@ beforeAll(async () => {
   mechEventId = mechEvent!.id;
 });
 
+// Clear on the way out as well as the way in. Without this, the fixture teams
+// and their open posting survive the run and show up as phantom entries on the
+// developer's own public home page until the next `db reset` — which reads as a
+// bug in the app rather than leftover test data.
+afterAll(clearFixtures);
+
 describe('anonymous access', () => {
   it('can read open postings', async () => {
     const { data, error } = await anonClient().from('postings').select().eq('status', 'open');
