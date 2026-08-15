@@ -400,6 +400,7 @@ export type Database = {
     Functions: {
       current_profile_team: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }
+      submit_application: { Args: { p_rows: Json }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
