@@ -40,11 +40,16 @@ let mechEventId: string;
 const FIXTURE_TEAM_SLUGS = ['test-soft', 'test-mech', 'test-elec'];
 
 /**
- * Same reasoning for postings. A developer's local database also holds whatever
- * postings they created to look at the site, so every assertion below filters
- * to these rather than counting the table.
+ * Same reasoning for postings, and the same `test-` prefix. A developer's local
+ * database also holds whatever postings they created to look at the site, so
+ * every assertion below filters to these rather than counting the table.
+ *
+ * The prefix is load-bearing rather than tidy: `postings.slug` is UNIQUE, and
+ * the team_postings migration now seeds real `mech-2026` / `elec-2026` /
+ * `soft-2026` rows. Unprefixed fixtures would fail to insert against a
+ * migrated database.
  */
-const FIXTURE_POSTING_SLUGS = ['soft-2026', 'soft-2027', 'mech-2026'];
+const FIXTURE_POSTING_SLUGS = ['test-soft-2026', 'test-soft-2027', 'test-mech-2026'];
 
 /** Fixtures use fixed slugs, so clear any leftovers first and keep runs repeatable. */
 async function clearFixtures() {
@@ -98,15 +103,15 @@ beforeAll(async () => {
   const { data: postings, error: postingsError } = await admin
     .from('postings')
     .insert([
-      { team_id: softTeamId, title: 'Software', slug: 'soft-2026', status: 'open' },
-      { team_id: softTeamId, title: 'Software Next', slug: 'soft-2027', status: 'draft' },
-      { team_id: mechTeamId, title: 'Mechanical', slug: 'mech-2026', status: 'draft' },
+      { team_id: softTeamId, title: 'Software', slug: 'test-soft-2026', status: 'open' },
+      { team_id: softTeamId, title: 'Software Next', slug: 'test-soft-2027', status: 'draft' },
+      { team_id: mechTeamId, title: 'Mechanical', slug: 'test-mech-2026', status: 'draft' },
     ])
     .select();
   if (postingsError) throw postingsError;
-  softPostingId = postings!.find((p) => p.slug === 'soft-2026')!.id;
-  softDraftPostingId = postings!.find((p) => p.slug === 'soft-2027')!.id;
-  mechPostingId = postings!.find((p) => p.slug === 'mech-2026')!.id;
+  softPostingId = postings!.find((p) => p.slug === 'test-soft-2026')!.id;
+  softDraftPostingId = postings!.find((p) => p.slug === 'test-soft-2027')!.id;
+  mechPostingId = postings!.find((p) => p.slug === 'test-mech-2026')!.id;
 
   const { data: apps, error: appsError } = await admin
     .from('applications')
@@ -201,7 +206,7 @@ describe('anonymous access', () => {
     const { data, error } = await anonClient().from('postings').select().eq('status', 'open');
     expect(error).toBeNull();
     const fixtures = data!.filter((p) => FIXTURE_POSTING_SLUGS.includes(p.slug));
-    expect(fixtures.map((p) => p.slug)).toEqual(['soft-2026']);
+    expect(fixtures.map((p) => p.slug)).toEqual(['test-soft-2026']);
   });
 
   it('can read teams, subteams and core questions', async () => {
@@ -229,7 +234,7 @@ describe('anonymous access', () => {
     // The drafts the anon caller could not see are really there.
     const seen = await admin.from('postings').select().eq('status', 'draft');
     expect(seen.data!.map((p) => p.slug)).toEqual(
-      expect.arrayContaining(['soft-2027', 'mech-2026']),
+      expect.arrayContaining(['test-soft-2027', 'test-mech-2026']),
     );
   });
 
