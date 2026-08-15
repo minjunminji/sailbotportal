@@ -238,8 +238,14 @@ describe('anonymous access', () => {
     expect(error).toBeNull();
     expect(data).toHaveLength(0);
 
-    const seen = await admin.from('applications').select();
-    expect(seen.data!.length).toBe(2);
+    // Scoped to this suite's own rows rather than counting the table: another
+    // integration suite writing applications in a parallel worker would
+    // otherwise fail this assertion for a reason that has nothing to do with RLS.
+    const seen = await admin
+      .from('applications')
+      .select()
+      .in('id', [softApplicationId, mechApplicationId]);
+    expect(seen.data).toHaveLength(2);
   });
 
   it('cannot read profiles', async () => {
