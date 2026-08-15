@@ -11,7 +11,6 @@ const admin = adminClient();
 // (error is null), the caller saw nothing, and — via the service role, which
 // bypasses RLS — the thing they could not see actually exists. Without the
 // third check these tests would pass against an empty database.
-const NIL_UUID = '00000000-0000-0000-0000-000000000000';
 
 const NOTE_BODY = 'Original note body';
 
@@ -30,13 +29,31 @@ let softEventId: string;
 let mechNoteId: string;
 let mechEventId: string;
 
+/**
+ * Fixture teams are namespaced so they cannot collide with the reference data
+ * (mech/elec/soft) installed by the reference_data migration.
+ *
+ * A blanket `.delete().neq('id', NIL_UUID)` would wipe that reference data and
+ * leave the local database unusable for app development until the next
+ * `db reset` — the tests would still pass, which is what makes it dangerous.
+ */
+const FIXTURE_TEAM_SLUGS = ['test-soft', 'test-mech', 'test-elec'];
+
 /** Fixtures use fixed slugs, so clear any leftovers first and keep runs repeatable. */
 async function clearFixtures() {
-  // Order matters. application_notes.author_id and postings.created_by reference
-  // profiles without a cascade, so those rows must go before the users do; and
-  // profiles.team_id references teams, so users must go before the teams do.
-  for (const table of ['application_events', 'application_notes', 'applications', 'postings']) {
-    const { error } = await admin.from(table).delete().neq('id', NIL_UUID);
+  const { data: teams, error: teamsReadError } = await admin
+    .from('teams')
+    .select('id')
+    .in('slug', FIXTURE_TEAM_SLUGS);
+  if (teamsReadError) throw teamsReadError;
+
+  const teamIds = (teams ?? []).map((t) => t.id);
+
+  // Order matters. postings.team_id is ON DELETE RESTRICT, so postings go before
+  // teams; applications, notes, and events all cascade from postings. And
+  // profiles.team_id references teams, so users go before the teams do.
+  if (teamIds.length > 0) {
+    const { error } = await admin.from('postings').delete().in('team_id', teamIds);
     if (error) throw error;
   }
 
@@ -48,7 +65,7 @@ async function clearFixtures() {
     if (error) throw error;
   }
 
-  const { error: teamsError } = await admin.from('teams').delete().neq('id', NIL_UUID);
+  const { error: teamsError } = await admin.from('teams').delete().in('slug', FIXTURE_TEAM_SLUGS);
   if (teamsError) throw teamsError;
 }
 
@@ -63,13 +80,13 @@ beforeAll(async () => {
   const { data: teams, error: teamsError } = await admin
     .from('teams')
     .insert([
-      { name: 'Software', slug: 'soft' },
-      { name: 'Mechanical', slug: 'mech' },
+      { name: 'Test Software', slug: 'test-soft' },
+      { name: 'Test Mechanical', slug: 'test-mech' },
     ])
     .select();
   if (teamsError) throw teamsError;
-  softTeamId = teams!.find((t) => t.slug === 'soft')!.id;
-  mechTeamId = teams!.find((t) => t.slug === 'mech')!.id;
+  softTeamId = teams!.find((t) => t.slug === 'test-soft')!.id;
+  mechTeamId = teams!.find((t) => t.slug === 'test-mech')!.id;
 
   const { data: postings, error: postingsError } = await admin
     .from('postings')
@@ -178,7 +195,11 @@ describe('anonymous access', () => {
     const anon = anonClient();
     const teams = await anon.from('teams').select();
     expect(teams.error).toBeNull();
-    expect(teams.data!.length).toBe(2);
+    // The reference_data migration installs mech/elec/soft alongside these
+    // fixtures, so assert visibility rather than an exact global count.
+    expect(teams.data!.map((t) => t.slug)).toEqual(
+      expect.arrayContaining(['test-soft', 'test-mech']),
+    );
 
     const subteams = await anon.from('subteams').select();
     expect(subteams.error).toBeNull();
@@ -522,11 +543,11 @@ describe('admin access', () => {
 
     const inserted = await adminUser
       .from('teams')
-      .insert({ name: 'Electrical', slug: 'elec' })
+      .insert({ name: 'Test Electrical', slug: 'test-elec' })
       .select();
     expect(inserted.error).toBeNull();
     expect(inserted.data).toHaveLength(1);
-    await admin.from('teams').delete().eq('slug', 'elec');
+    await admin.from('teams').delete().eq('slug', 'test-elec');
   });
 });
 

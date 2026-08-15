@@ -437,13 +437,25 @@ then fast. **Copy the `API URL`, `anon key`, and `service_role key` from the out
 > **`analytics.enabled = false` in `config.toml`.** The `supabase_vector` container crash-loops on
 > Windows unless the Docker daemon is exposed on `tcp://localhost:2375`, which made every
 > `supabase db reset` end in a 502 and exit non-zero *despite every migration applying fine*. That
-> false failure would break any script gating on the exit code. Verified fixed across three
-> consecutive runs: exit 0, zero 502s, and this project's vector container sits at `Exited (0)`.
+> false failure would break any script gating on the exit code.
 >
-> **When re-checking this, do not pipe.** `supabase db reset | tail -5; echo $?` reports *tail's*
-> exit code, so it reads 0 no matter what Supabase did. Redirect to a file and check `$?` directly.
-> Note that `resumegit`'s vector container is still crash-looping, so `docker ps` will show a
-> restarting vector regardless — check the container name before concluding it is this project's.
+> **Disabling analytics reduced the problem but did not fix it. `supabase db reset` is FLAKY.**
+> Measured over five consecutive runs on CLI 2.66.0: **four exited 1** with `Error status 502` at
+> the "Restarting containers" step, one exited 0. Migrations applied correctly and all containers
+> came up healthy in every case, including the failures. An earlier "3/3 exit 0" reading in this
+> document was a small sample stated too confidently — it has been corrected.
+>
+> **Never gate a script or CI step on this exit code.** Assert on the database state instead: query
+> the tables you expect to exist. A flaky exit code is worse than a consistently broken one, because
+> it passes just often enough to look fixed.
+>
+> **When re-checking, do not pipe.** `supabase db reset | tail -5; echo $?` reports *tail's* exit
+> code, so it reads 0 regardless of what Supabase did. Redirect to a file and check `$?` directly.
+> Also note `resumegit`'s vector container crash-loops independently, so `docker ps` shows a
+> restarting vector regardless — check the container name before blaming this project.
+>
+> A CLI upgrade (2.114.0 is available) may resolve it, but that is a global tool shared with
+> `resumegit`, so it is Ryan's call rather than something to change unilaterally.
 
 **Step 3: Create `.env.local`**
 
