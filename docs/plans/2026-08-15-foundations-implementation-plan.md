@@ -437,7 +437,13 @@ then fast. **Copy the `API URL`, `anon key`, and `service_role key` from the out
 > **`analytics.enabled = false` in `config.toml`.** The `supabase_vector` container crash-loops on
 > Windows unless the Docker daemon is exposed on `tcp://localhost:2375`, which made every
 > `supabase db reset` end in a 502 and exit non-zero *despite every migration applying fine*. That
-> false failure would break any script gating on the exit code. Verified fixed: reset now exits 0.
+> false failure would break any script gating on the exit code. Verified fixed across three
+> consecutive runs: exit 0, zero 502s, and this project's vector container sits at `Exited (0)`.
+>
+> **When re-checking this, do not pipe.** `supabase db reset | tail -5; echo $?` reports *tail's*
+> exit code, so it reads 0 no matter what Supabase did. Redirect to a file and check `$?` directly.
+> Note that `resumegit`'s vector container is still crash-looping, so `docker ps` will show a
+> restarting vector regardless — check the container name before concluding it is this project's.
 
 **Step 3: Create `.env.local`**
 
@@ -1085,12 +1091,24 @@ git commit -m "Add RLS policies with integration tests proving team isolation"
 
 ---
 
-## Task 11: Seed data
+## Task 11: Reference data
 
 **Files:**
-- Create: `supabase/seed.sql`
+- Create: `supabase/migrations/<timestamp>_reference_data.sql`
 
-**Step 1: Write the seed**
+> **This is a migration, not `seed.sql`.** Seed files run only on local `db reset` — `supabase db
+> push` ignores them. Teams, subteams, and core questions are not fixtures; they are **reference
+> data the app cannot function without**, and content in their own right (the PATH description is
+> copy, not a placeholder). Putting them in a migration makes local and production converge
+> automatically. Left in `seed.sql`, the first production deploy would come up with eight empty
+> tables and an application form that renders nothing.
+>
+> `seed.sql` stays reserved for genuinely disposable fixtures — fake applicants to develop the
+> kanban board against.
+>
+> Every statement is idempotent (`on conflict do nothing`) so re-running is safe.
+
+**Step 1: Write the migration**
 
 ```sql
 insert into teams (name, slug) values
@@ -1171,8 +1189,8 @@ Then confirm counts in Supabase Studio (see the port note in Task 5) — **3 tea
 **Step 3: Commit**
 
 ```bash
-git add supabase/seed.sql
-git commit -m "Add seed data for teams, subteams, and core questions"
+git add supabase/migrations
+git commit -m "Add reference data for teams, subteams, and core questions"
 ```
 
 ---
