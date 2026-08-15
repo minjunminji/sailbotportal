@@ -1,0 +1,84 @@
+﻿UBC Sailbot Software Team Posting
+Our current project is an autonomous research vessel capable of collecting oceanic and atmospheric data. With our expertise in autonomous sailing, the goal is to monitor the health of our oceans while collaborating with stakeholders and researchers involved in climate science and oceanography.
+
+
+The initial design phase is now complete, and implementation is well underway for our various software projects. As a new member, this is a great time to join, as you get to jump straight into hands-on software development within our much wider software project. Members of the software team are directly responsible for developing our codebases to push the boundaries of autonomous sailing.
+Projects
+The software team is responsible for designing, implementing, and testing the software system of our autonomous sailboats. We work on both low-level and high-level integration, from interfacing with sensors to planning sea routes with pathfinding algorithms. Below, you will find brief descriptions of each of the projects we are working on.
+Pathfinding (PATH)
+Pathfinding is the "brain" of Polaris, responsible for determining an efficient route from start to finish. To find viable paths, we rely heavily on vector math, calculus, and path planning algorithms. We also develop cost functions based on the boat’s environment and work to minimize those costs to find the most efficient path.
+As we wrap up Polaris and gear up for our next project, we are transitioning from a Python codebase to Rust (or another low-level systems language). .
+You’ll be a great fit if:
+* You can balance high-level architectural design with low-level implementation.
+* You have solid software habits: collaboration, documentation, and version control. 
+* You’re comfortable with complex math. You won’t be solving math but you must have a good level of  knowledge about:
+   * Vectors and  kinematics
+   *  Optimization techniques (Gradient descent, objective functions
+   * Algorithms and Data Structures
+* You can communicate effectively with sub-teams outside your area of expertise.
+* You’re comfortable with reading research papers (most resources on autonomous sailing are academic research)
+* You’re accountable for the work you do and can dedicate about 8 to 10 hours every week (on average). 
+Codebases: pathfinding_module
+Rudder and Wingsail Controller (CTRL)
+The controller’s main responsibility is to act as the virtual helmsman of the boat, turning abstract objectives such as desired heading into commands to send to the rudder and sails. This involves using a combination of control theory, physical modelling, sailing knowledge, and software development skills to develop, implement, test, and verify control models virtually and physically.
+
+
+Codebase: controller
+Boat Simulator (SIM)
+The boat simulator’s purpose is to mimic the real-world environment so that we can run and test our software without a physical vessel in the water. This involves creating a simple physics model of the boat, emulating the low-level controls that actuate the rudder and sail, and introducing artificial noise and delays in the sensor readings that resemble the behaviour of the actual hardware. The boat simulator helps us verify that our software behaves as intended in an idealized environment before integrating with the Mechanical and Electrical teams on the physical system and conducting more realistic tests.
+
+
+Codebase: boat_simulator
+Network Systems (NET)
+Network Systems acts as part of the software-hardware interface, a bridge for data and commands to travel between the two. It enables the pathfinding and control software to function without worrying about the intricacies of any data transport medium. For example, the controller can trust a command to “turn 30 degrees port” to do precisely that. To accomplish this, the Network Systems team works with the Firmware (Electrical) team just as much as the rest of the software team. Occasionally, this includes non-programming-related work, like playing around with Linux configurations and directly interfacing with hardware.
+
+
+Codebase: network_systems
+Website (WEB)
+The website serves as a versatile platform facilitating seamless data interactions to and from the vessel. It aims to accommodate various user categories and corresponding functions:
+
+
+* UBC Sailbot Software Team Members: Support software development.
+* Vessel Operations: Aid in comprehensive testing on land and in water.
+* Researchers: Provide convenient access to collected data.
+* General Public: Offer real-time tracking of the boat's progress during deployment.
+
+
+Codebase: website
+DevOps
+Due to challenges with developing, testing, and deploying our software in previous projects, we have decided to adopt the Infrastructure as Code (IaC)  process of managing our infrastructure. The goal is to ensure that we can deploy our software quickly, correctly, and consistently. Our approach is to create an easy-to-set-up development environment customized for our needs, CI/CD pipelines that are run automatically when changes are pushed, and a Docs site to host our software documentation and technical concepts reference.
+
+
+Codebases: sailbot_workspace, docs
+Technical Skills
+The following is a list of technical skills that you will have the opportunity to develop on the team. Prior experience in any of them is not a requirement, but a plus.
+
+
+Our Docs site gives an overview of some of these technical skills: References.
+Programming Languages
+* Python
+* C++
+* Javascript/Typescript
+* HTML/CSS
+* Shell
+Software
+* Visual Studio Code
+* Git/GitHub
+* Robot Operating System (ROS)
+* React
+* MongoDB
+* Linux
+* Docker
+Software Concepts
+* Testing (unit, regression, integration, mocks)
+* Data parsing, analysis, and visualization 
+* Web development
+* Object-Oriented Programming (OOP)
+* Continuous Integration and Development (CI/CD)
+* Agile software development
+* Technical documentation
+Miscellaneous
+* Physics modeling
+* Control theory
+* Sailing!
+UBC SAILBOT

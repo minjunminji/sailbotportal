@@ -1,0 +1,82 @@
+﻿UBC Sailbot Electrical Team Posting
+Our current project involves constructing and testing a 3m fully autonomous sailboat, capable of collecting oceanic and atmospheric data in the Pacific Ocean. Our goals are to raise awareness of global warming on the ocean’s surface waters, autonomously collect data in the Pacific over multiple weeks and provide a modular design that can integrate various scientific sensors, which showcases the potential use case of these vehicles.
+Electrical Team
+The electrical team is responsible for designing, implementing and testing hardware and low-level software that bring the boat to life and allow it to navigate the ocean. There is a vast amount of work done in the electrical team spanning multiple interests.
+
+
+  
+
+Communications (COM)
+How do we communicate between devices on the boat and process data?
+  
+
+The team is responsible for a robust communication network to transmit data, commands and errors. They focus on designing interconnected transmission lines, developing network interface PCBs and firmware, spec sensors used to gather oceanic data, and designing message formats/frames encompassing that information. They also, in collaboration with the software team, design the boat’s main computer, where commands are sent, and data is received. 
+
+
+Goal: Develop a robust communication layer to integrate different devices and receive/send data/error messages.
+
+
+Projects include:
+* Main Computer Hardware
+* Critical Data Collection Sensors
+* High-Level Architecture and System Layout
+* Firmware
+* Custom PCBs
+* Waterproof Enclosure Design
+Drive (DRV)
+How do we physically control the boat?
+  
+
+This team is responsible for the boat’s control systems. They design, assemble and test hardware/firmware that controls the rudder and sail. The rudder controller is pivotal for providing efficient and reliable control through the use of responsive control algorithms and powerful motors. The team also works on the wingsail controller, which precisely controls the sail and collects critical pathfinding data.
+
+
+Goal: Develop controllers for the rudder and sail positions that are reliable and minimize power consumption.
+
+
+Projects include:
+* Rudder and Wingsail Controller Hardware
+* PID Controls Algorithm
+* Firmware
+* Automatic Identification System (AIS) Integration
+* Critical Pathfinding Sensors
+Power (PWR)
+How do we supply long-lasting power?
+  
+
+This team is responsible for the boat's power system. They focus on developing reliable systems that efficiently distribute power throughout the boat. The power system includes multiple solar panels, power tracking and battery management systems, to name a few. Since power is a finite resource, it must be carefully allocated to each device, which is managed through a power budget maintained by the team.
+
+
+Goal: Develop a reliable power system that efficiently distributes energy throughout the boat, ensuring optimal performance and sustainability.
+
+
+Projects include:
+* Power Budget
+* Solar Panel Customization
+* Power Charge and Distribution Hardware
+* Batteries & Battery Management System (BMS)
+________________
+Technical Skills
+The following are technical skills that you will have the opportunity to develop at UBC Sailbot Elec. Prior experience is not required, but is a plus.
+Hardware
+* System design
+* PCB design
+* Power systems
+* Circuit design
+* Microcontroller concepts
+Software
+* C/C++ 
+* Python 
+* Bash
+* Git
+* PID controls
+Tools
+* Oscilloscope
+* Multimeter
+* Soldering iron
+* Crimping tool
+* STM32CUBE IDE
+* Altium / KiCAD
+* LTSpice / SPICE tools
+* Solidworks / Fusion 360
+* PuTTY and debuggers
+UBC SAILBOT

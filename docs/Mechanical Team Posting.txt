@@ -1,0 +1,34 @@
+﻿UBC Sailbot MECH Team Posting
+
+
+  
+
+
+
+Our current project, POLARIS, is an ocean-going, fixed-wing sailboat designed to support oceanic research by providing surface data to researchers. The long-term goal for this project is to be a flexible platform that will enable future improvements to our vessels through an iterative design process involving the rudder, sail, keel, and hull.
+Project Team Year Review
+Sail
+      
+
+This year, the sail team worked on the construction of the wingsail. This included components such as the composite shell, the trim tab, and the internal structure. For POLARIS, we created a rigid wingsail that uses the same aerodynamic principles as airplane wings to generate lift and propel the boat forward. This upcoming term, we will be upgrading and finalizing important internal components.
+________________
+Rudder
+  
+
+
+
+After finalizing a design for the rudder body and the actuation mechanism, we worked intensely this semester to bring our design to life. While still leaving room for design iteration, we verified our manufacturing methods and actuation design through prototyping. Some of these methods include CNC milling, 3D printing, composite layups, and hands-on machining. Simultaneously, we validated numbers through structural calculations and test jigs to ensure that integration with the other sub-teams (mainly HULL and ELEC) went smoothly. We completed manufacturing for the rudder, which is now functionally ready for electrical and software testing.
+
+
+________________
+Hull
+  
+
+  
+
+The hull team is responsible for the design and construction of our autonomous vessel’s hull and keel. Thus far, we have used Maxsurf, SolidWorks, and Ansys to design, analyze, and optimize our 3-meter-long hull and 80-kg bulb keel. This semester, we completed our manufacturing phase using materials including carbon fiber, fiberglass, PVC foam, and marine-grade plywood to make our composite boat. There was a heavy focus on hands-on fabrication and cross-team coordination with the sail, rudder, and electrical sub-teams to ensure seamless integration of all systems within the boat.
+
+
+
+
+UBC SAILBOT
