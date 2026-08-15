@@ -136,31 +136,10 @@ on conflict (slug) do nothing;
 -- No subteam ranking: elec places applicants into COM / DRV / PWR after the
 -- interview rather than asking for a preference on the form.
 --
--- INCOMPLETE — six technical questions are missing.
---
--- The 2025 electrical quiz had six further required `long_text` questions after
--- `proud_project`, covering:
---
---   1. measuring current with a multimeter
---   2. wiring batteries in series versus in parallel
---   3. connecting two sensors to one microcontroller
---   4. an I2C e-compass returning all zeros
---   5. methods for reducing noise in a circuit
---   6. verifying reliability in a harsh, remote environment
---
--- Their verbatim wording is NOT in this repository. The implementation plan
--- points at "the 2025 form transcript in the design doc", but
--- docs/plans/2026-08-15-hiring-portal-design.md contains no transcript, and
--- docs/Electrical Team Posting.txt is the role description only. Paraphrasing
--- from the topic list above would produce six questions the elec leads would
--- recognise as not theirs, which is worse than six questions that are visibly
--- absent, so they are omitted rather than invented.
---
--- TO FINISH: paste the six questions into the array below, after
--- `proud_project`, as `long_text` / `"required": true` with ids
--- `multimeter_current`, `batteries_series_parallel`, `two_sensors_one_mcu`,
--- `i2c_compass_zeros`, `reducing_noise`, `harsh_environment_reliability`.
--- The posting is `draft`, so it cannot reach an applicant half-finished.
+-- All eight questions are transcribed verbatim from docs/2025-application-form.md
+-- (questions 19-26). An earlier pass left the six technical questions out because
+-- their wording genuinely was not in the repository at the time; the transcript
+-- has since been added, and that file is the source of truth for wording.
 
 insert into postings (team_id, title, slug, description, status, position, question_schema, subteam_ranking)
 select
@@ -185,6 +164,48 @@ The electrical team is responsible for designing, implementing and testing hardw
       "type": "long_text",
       "label": "Describe a project you've worked on that you're most proud of.",
       "help": "1. Explain what you learned. 2. Describe the difficulties you encountered. 3. How would you improve it if you were to do it again. Please write your response as if you were explaining it to a first year engineering student.",
+      "required": true,
+      "config": {"maxLength": 4000}
+    },
+    {
+      "id": "multimeter_current",
+      "type": "long_text",
+      "label": "You are trying to measure current from the battery system using a multimeter. The multimeter is set to current mode and you probe between the positive and negative terminal of the battery. Why is this a bad idea and potentially dangerous? How else would you measure the current? (write down any tools you would use)",
+      "required": true,
+      "config": {"maxLength": 4000}
+    },
+    {
+      "id": "batteries_series_parallel",
+      "type": "long_text",
+      "label": "What are some advantages and disadvantages of combining battery systems in series and in parallel?",
+      "required": true,
+      "config": {"maxLength": 4000}
+    },
+    {
+      "id": "two_sensors_one_mcu",
+      "type": "long_text",
+      "label": "A wind sensor and pressure sensor are continuously transmitting data to the same microcontroller. What are some considerations to ensure data collection from both sensors at all times?",
+      "required": true,
+      "config": {"maxLength": 4000}
+    },
+    {
+      "id": "i2c_compass_zeros",
+      "type": "long_text",
+      "label": "You have an I2C e-compass that you're trying to receive data from, but are always receiving 0s. What are some potential causes of this issue and how would you go about troubleshooting this?",
+      "required": true,
+      "config": {"maxLength": 4000}
+    },
+    {
+      "id": "reducing_noise",
+      "type": "long_text",
+      "label": "What are some methods for reducing noise in a circuit?",
+      "required": true,
+      "config": {"maxLength": 4000}
+    },
+    {
+      "id": "harsh_environment_reliability",
+      "type": "long_text",
+      "label": "How would you go about verifying and proving the reliability of an electrical system for use in a harsh remote environment?",
       "required": true,
       "config": {"maxLength": 4000}
     }

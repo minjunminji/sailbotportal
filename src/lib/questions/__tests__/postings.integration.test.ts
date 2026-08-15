@@ -198,23 +198,42 @@ describe('electrical', () => {
     expect(question!.help).toContain('first year engineering student');
   });
 
-  /**
-   * DELIBERATELY ASSERTS AN INCOMPLETE POSTING.
-   *
-   * Six technical questions from the 2025 electrical quiz are missing because
-   * their verbatim wording is not in this repository — see the long comment in
-   * the team_postings migration. Paraphrasing them would have been silent; this
-   * assertion is not. When the real wording is pasted in, this test fails and
-   * whoever pastes it updates the count and drops the `.todo` below.
-   */
-  it('is still missing its six technical questions', () => {
+  it('asks all eight 2025 questions in order', () => {
     expect(questionsOf('elec-2026').map((q) => q.id)).toEqual([
       'saturday_availability',
       'proud_project',
+      'multimeter_current',
+      'batteries_series_parallel',
+      'two_sensors_one_mcu',
+      'i2c_compass_zeros',
+      'reducing_noise',
+      'harsh_environment_reliability',
     ]);
   });
 
-  it.todo('asks the six 2025 technical questions once their wording is recovered');
+  /**
+   * Wording is the thing that rots silently. Leads recognise their own
+   * questions, so a paraphrase reads as a bug rather than a nicety — these spot
+   * checks pin the phrases most likely to be "tidied up" by a future editor.
+   * docs/2025-application-form.md is the source of truth.
+   */
+  it('preserves the exact 2025 wording', () => {
+    const byId = new Map(questionsOf('elec-2026').map((q) => [q.id, q]));
+
+    expect(byId.get('multimeter_current')!.label).toContain(
+      'probe between the positive and negative terminal',
+    );
+    expect(byId.get('i2c_compass_zeros')!.label).toContain('always receiving 0s');
+    expect(byId.get('harsh_environment_reliability')!.label).toContain('harsh remote environment');
+  });
+
+  it('makes every technical question required', () => {
+    const technical = questionsOf('elec-2026').filter(
+      (q) => q.id !== 'saturday_availability' && q.id !== 'proud_project',
+    );
+    expect(technical).toHaveLength(6);
+    expect(technical.every((q) => q.required)).toBe(true);
+  });
 });
 
 describe('software', () => {
