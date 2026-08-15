@@ -427,10 +427,22 @@ supabase start
 Expected: a table of local URLs and keys. This pulls several images on first run — it is slow once,
 then fast. **Copy the `API URL`, `anon key`, and `service_role key` from the output.**
 
+> **Two environment findings from the first run, both already applied.**
+>
+> **Ports moved to a `544xx` block.** The `resumegit` project holds a local Supabase stack on the
+> default `543xx` ports, and two projects cannot share them. This project uses API 54421, db 54422,
+> studio 54423. **Never hardcode `54321`** — read the URL from env. Reverting to defaults means
+> stopping `resumegit` and editing seven numbers in `config.toml` plus `.env.local`.
+>
+> **`analytics.enabled = false` in `config.toml`.** The `supabase_vector` container crash-loops on
+> Windows unless the Docker daemon is exposed on `tcp://localhost:2375`, which made every
+> `supabase db reset` end in a 502 and exit non-zero *despite every migration applying fine*. That
+> false failure would break any script gating on the exit code. Verified fixed: reset now exits 0.
+
 **Step 3: Create `.env.local`**
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54421
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key from supabase start>
 SUPABASE_SERVICE_ROLE_KEY=<service_role key from supabase start>
 
@@ -1084,12 +1096,12 @@ git commit -m "Add RLS policies with integration tests proving team isolation"
 insert into teams (name, slug) values
   ('Mechanical', 'mech'),
   ('Electrical', 'elec'),
-  ('Software', 'soft'),
-  ('Operations', 'ops')
+  ('Software', 'soft')
 on conflict (slug) do nothing;
 
--- Taken from the real team postings in docs/. Operations has no subteams:
--- the site describes it as one ~6-person group, and no posting exists yet.
+-- Taken from the real team postings in docs/. Operations is intentionally
+-- absent: it is a ~6-person group that hires personally with no application
+-- form, so it is out of scope for this portal entirely.
 insert into subteams (team_id, name, code, slug, position, description)
 select t.id, s.name, s.code, s.slug, s.position, s.description
 from teams t
@@ -1127,7 +1139,7 @@ on conflict (team_id, slug) do nothing;
 -- shared set is: name, email, year, and home department are built-in columns,
 -- which leaves exactly one shared question. Everything else on that form was
 -- team-specific. Resist padding this out — every key added here becomes a
--- permanent export column for all four teams.
+-- permanent export column for all three teams.
 insert into core_questions (stable_key, position, definition) values
   ('why_sailbot', 0, '{
      "type": "long_text",
@@ -1139,10 +1151,9 @@ insert into core_questions (stable_key, position, definition) values
 on conflict (stable_key) do nothing;
 ```
 
-> Subteams, codes, and descriptions come from the real postings in `docs/`. **Operations is seeded
-> with no subteams and no posting** — its application did not exist on the 2025 form and its
-> structure is still unconfirmed. This is the case that proves a team with zero subteams must not
-> break the form.
+> Subteams, codes, and descriptions come from the real postings in `docs/`. **Operations is
+> deliberately not seeded** — it hires personally with no application form, so it is out of scope.
+> Nothing in the schema assumes three teams; adding it later is one seed row and a posting.
 >
 > The per-team technical quizzes (mechanical's 11 questions, electrical's 8, software's skills
 > matrix and quiz submission) are **not** seeded here. They belong in `postings.question_schema` and
@@ -1154,8 +1165,8 @@ on conflict (stable_key) do nothing;
 supabase db reset
 ```
 
-Then confirm counts in Supabase Studio at http://127.0.0.1:54323 — **4 teams, 12 subteams
-(6 soft, 3 elec, 3 mech, 0 ops), 1 core question.**
+Then confirm counts in Supabase Studio (see the port note in Task 5) — **3 teams, 12 subteams
+(6 soft, 3 elec, 3 mech), 1 core question.**
 
 **Step 3: Commit**
 

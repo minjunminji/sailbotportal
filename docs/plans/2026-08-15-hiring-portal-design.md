@@ -14,7 +14,11 @@ Deferred work and the reasoning behind each cut live in [FUTURE_FEATURES.md](../
 
 Two levels, and the naming matters because the original spec used different words:
 
-- **Team** — mech, elec, soft, ops (Operations). Four of them.
+- **Team** — mech, elec, soft. Three of them.
+
+  Operations exists on the wider team but is **out of scope for this portal**: it is roughly six
+  people and hires personally, with no application form. Nothing in the schema assumes three, so
+  adding it later is one seed row and a posting.
 - **Subteam** — pathfinding, website, network, and so on. Belongs to exactly one team.
 
 **One posting per team**, but **one submission flow across all of them.** This mirrors the existing
@@ -532,11 +536,6 @@ another team's applicants — this is not a hidden route.
 - Whether Sailbot recruits graduate students. If so, `year_of_study` wants `masters` and `phd`
   rather than a single catch-all `grad`.
 - The seed list of common home departments (APSC, IGEN, MECH, ENPH, CPSC, …).
-- **The Operations team.** The site describes it as covering finance, marketing, public relations,
-  and industry outreach, at roughly six people — but the 2025 application form has no Operations
-  section at all, and no posting document exists. Unknown whether it recruits through a separate
-  process, has subteams, or should be a posting with none. **A team with zero subteams must not
-  break the form**: its branch simply renders no ranking step.
 - **A second file upload per question.** Software's technical quiz accepts either a public GitHub
   URL or a ZIP upload, which the `file` question type currently does not model — the design assumed
   one resume upload per submission and nothing else.
