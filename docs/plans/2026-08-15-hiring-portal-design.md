@@ -459,6 +459,18 @@ Three things it needs because of what FredDB does not provide:
 
 Invalidation is a best-effort delete on posting write — logged, never thrown.
 
+**A corrupt cached value is a miss, not a failure.** Parsing happens outside the network error path,
+so malformed JSON does not count toward tripping the breaker. The breaker exists to stop hammering a
+service that is *down*, and a corrupt value means the service answered promptly and successfully.
+Counting it would be actively harmful: one poisoned key could disable the cache for every key, and
+since the poisoned value stays poisoned, the breaker would re-trip immediately after each cooldown —
+turning a single bad record into a permanent outage. Treated as a miss it is self-healing, because
+the fallback runs and the write-behind overwrites the bad value. Given FredDB states data may be
+lost at any time, truncated values are an expected condition rather than an exotic one.
+
+Cache hits are boxed as `{ data }` rather than returned directly, so a legitimately falsy cached
+value (`null`, `0`, `false`, `''`) still counts as a hit instead of silently re-fetching forever.
+
 **All of it lives behind a single `cache.ts`.** Call sites see `getPosting(id)` and have no idea
 FredDB exists.
 
