@@ -9,7 +9,17 @@
     "lint": "eslint",
     "test": "jest --testPathIgnorePatterns \"/node_modules/\" \"/.next/\" \"\\.integration\\.test\\.ts$\"",
     "test:integration": "jest --testMatch \"**/*.integration.test.ts\"",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -29,8 +39,11 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
+    "husky": "^9.1.7",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
+    "lint-staged": "^17.3.0",
+    "prettier": "^3.9.6",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "typescript": "^5"
