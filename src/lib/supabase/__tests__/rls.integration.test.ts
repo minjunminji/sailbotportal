@@ -39,6 +39,13 @@ let mechEventId: string;
  */
 const FIXTURE_TEAM_SLUGS = ['test-soft', 'test-mech', 'test-elec'];
 
+/**
+ * Same reasoning for postings. A developer's local database also holds whatever
+ * postings they created to look at the site, so every assertion below filters
+ * to these rather than counting the table.
+ */
+const FIXTURE_POSTING_SLUGS = ['soft-2026', 'soft-2027', 'mech-2026'];
+
 /** Fixtures use fixed slugs, so clear any leftovers first and keep runs repeatable. */
 async function clearFixtures() {
   const { data: teams, error: teamsReadError } = await admin
@@ -187,8 +194,8 @@ describe('anonymous access', () => {
   it('can read open postings', async () => {
     const { data, error } = await anonClient().from('postings').select().eq('status', 'open');
     expect(error).toBeNull();
-    expect(data).toHaveLength(1);
-    expect(data![0].slug).toBe('soft-2026');
+    const fixtures = data!.filter((p) => FIXTURE_POSTING_SLUGS.includes(p.slug));
+    expect(fixtures.map((p) => p.slug)).toEqual(['soft-2026']);
   });
 
   it('can read teams, subteams and core questions', async () => {
@@ -215,7 +222,9 @@ describe('anonymous access', () => {
 
     // The drafts the anon caller could not see are really there.
     const seen = await admin.from('postings').select().eq('status', 'draft');
-    expect(seen.data).toHaveLength(2);
+    expect(seen.data!.map((p) => p.slug)).toEqual(
+      expect.arrayContaining(['soft-2027', 'mech-2026']),
+    );
   });
 
   it('cannot read applications at all', async () => {
@@ -539,7 +548,9 @@ describe('admin access', () => {
 
     const postings = await adminUser.from('postings').select();
     expect(postings.error).toBeNull();
-    expect(postings.data).toHaveLength(3);
+    expect(postings.data!.map((p) => p.slug)).toEqual(
+      expect.arrayContaining(FIXTURE_POSTING_SLUGS),
+    );
 
     const inserted = await adminUser
       .from('teams')
