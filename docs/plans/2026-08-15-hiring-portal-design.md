@@ -528,6 +528,31 @@ Colour and type are cheap to change later. Structure and accessibility are not.
 Enforced in **RLS policies keyed off `profiles`**, not in the UI. A lead physically cannot fetch
 another team's applicants — this is not a hidden route.
 
+### Every Postgres function is a public API endpoint until you revoke it
+
+**This bit me once and will bite again.** Postgres grants `EXECUTE` on a newly created function to
+`PUBLIC` by default, and Supabase exposes everything in the `public` schema over PostgREST. A
+function written purely as an internal transaction primitive is therefore an **anonymous write
+endpoint** the moment it is created — reachable by any caller with the anon key, bypassing every
+check in the server action that was supposed to be its only caller.
+
+So every function added from here on must end with:
+
+```sql
+revoke all on function public.<name>(<args>) from public, anon, authenticated;
+grant execute on function public.<name>(<args>) to service_role;
+```
+
+and carry a test asserting an anon client gets `42501`. `submit_application` does both.
+
+Prefer **`SECURITY INVOKER`** for these. The service role already has `BYPASSRLS`, so `DEFINER` buys
+nothing and turns the function into a permanent RLS hole if grants are ever loosened.
+
+Keep validation in **one place, not two.** `submit_application` deliberately does not re-check
+posting status, subteam membership, or storage paths — those live in the server action. Splitting
+authority across two languages produces two half-authorities that drift apart. The single rule the
+database keeps is the unique index, because only the database can win a race.
+
 ---
 
 ## 10. Stack
