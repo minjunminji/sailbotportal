@@ -14,11 +14,24 @@ Deferred work and the reasoning behind each cut live in [FUTURE_FEATURES.md](../
 
 Two levels, and the naming matters because the original spec used different words:
 
-- **Team** — elec, mech, soft, business. Four of them.
+- **Team** — mech, elec, soft, ops (Operations). Four of them.
 - **Subteam** — pathfinding, website, network, and so on. Belongs to exactly one team.
 
-**One posting per team.** An applicant picks a team, fills one application, and ranks that team's
-subteams in preference order. Applying to two teams means two independent applications.
+**One posting per team**, but **one submission flow across all of them.** This mirrors the existing
+Google Form: the applicant answers shared questions once, opts in to each team individually, answers
+that team's questions, and uploads a resume once at the end.
+
+**One submission writes one `applications` row per selected team.** This is the important part. A
+candidate who applies to mech and software needs *two independent statuses* — mech must be able to
+reject them while software is still interviewing. One row cannot hold that. So the applicant
+experiences a single form while leads get genuinely separate pipelines, each on its own board.
+
+Rows created together share a `submission_id`, which is how the admin UI can say "this person also
+applied to Software" without conflating it with a separate application made months later.
+
+**Subteam ranking is per-posting, not universal.** Software asks applicants to rank their top three
+of NET/PATH/SIM/WEB/CTRL/DevOps. Mechanical and Electrical do not rank at all. Postings therefore
+carry ranking config rather than every team being assumed to want it.
 
 **Applications are fungible within a team.** Any subteam lead can review any application under
 their team. Ranking is a hint about who looks first, not an ownership assignment. A lead who passes
@@ -31,6 +44,14 @@ Considered and rejected. Per-subteam postings give sharper customisation but for
 guess which three to apply to, and leave several leads independently reviewing the same person with
 no idea the others are looking. Ranking inside one application preserves the handoff behaviour the
 current Google Form already provides.
+
+### Subteams carry content, not just a label
+
+The team postings describe each subteam substantially — PATH has a "You'll be a great fit if" list,
+each electrical subteam states a goal and a projects list, and several name their codebases. An
+applicant ranking NET against PATH against SIM has to be able to read what those are, on the form,
+at the moment they rank. So `subteams` carries `code`, `description`, and a `details` JSONB for
+goal/projects/codebases — not merely a name to display in a dropdown.
 
 ---
 
@@ -95,8 +116,8 @@ Postgres via Supabase. Seven tables. DDL below is illustrative rather than final
 
 | Table | Purpose |
 |---|---|
-| `teams` | 4 rows: elec, mech, soft, business |
-| `subteams` | belongs to a team, has an `active` flag |
+| `teams` | 4 rows: mech, elec, soft, ops |
+| `subteams` | belongs to a team; `code`, `description`, `details`, `active` flag |
 | `profiles` | extends `auth.users`; drives all RLS |
 | `postings` | one per team, owns `question_schema` |
 | `core_questions` | org-wide, admin-owned |
@@ -133,6 +154,8 @@ create table postings (
   status          text not null default 'draft'
                   check (status in ('draft', 'open', 'closed')),
   question_schema jsonb not null default '[]',
+  subteam_ranking jsonb not null default '{"enabled": false, "maxChoices": 3}',
+  position        integer not null default 0,   -- order of the team's branch in the form
   closes_at       timestamptz,
   created_by      uuid references profiles(id),
   created_at      timestamptz not null default now()
@@ -152,12 +175,12 @@ custom answers go to JSONB.
 create table applications (
   id                       uuid primary key default gen_random_uuid(),
   posting_id               uuid not null references postings(id),
+  submission_id            uuid not null,     -- groups rows written by one submission
   applicant_name           text not null,
   applicant_email          text not null,
   year_of_study            text not null,     -- ordinal: '1'..'5', 'masters', 'phd'
-  faculty                  text not null,     -- from app config list
-  major                    text,              -- normalising combobox, free text allowed
-  resume_path              text,              -- private bucket key
+  home_department          text not null,     -- APSC, MECH, CPSC, ENPH, IGEN, ...
+  resume_path              text,              -- private bucket key, shared across the submission
   ranked_subteams          uuid[] not null default '{}',   -- ordered, index 0 = first choice
   answers                  jsonb not null default '{}',
   question_schema_snapshot jsonb not null,
@@ -174,20 +197,19 @@ create unique index applications_posting_email_uniq
 The unique index turns an accidental double submit into a clear message rather than a duplicate row
 or a 500.
 
-#### Year, faculty, and major
+#### Year and home department
 
-Three separate fields rather than one `program` string, because each wants different input:
+The existing form asks "Year/Type of Education" and "Home Department (APSC, IGEN, MECH, ENPH, CPSC,
+etc.)". Keep that vocabulary rather than inventing a faculty/major split the team does not use.
 
 - **`year_of_study`** — dropdown. **Stored as an ordinal** (`'1'`…`'5'`, plus grad values), rendered
   through a label map. Storing `"3rd year"` makes "3rd year and above" inexpressible as a filter and
   sorts alphabetically.
-- **`faculty`** — dropdown, backed by an **array in app config** rather than a CHECK constraint or a
-  lookup table. Adding a faculty becomes an array edit, not a migration. Zod validates against it.
-- **`major`** — a **combobox with type-ahead over a seed list that still accepts free text**. Plain
-  free text fragments fast: "CPEN", "Computer Engineering", "comp eng", and "Computer Engineering
-  (Co-op)" become four values within one cycle, and grouping in the export stops working. The seed
-  list normalises the common cases while unusual majors still get through, and nobody maintains it.
-  `quick-add-blob-combobox.tsx` in the resumegit project is the same pattern.
+- **`home_department`** — a **combobox with type-ahead over a seed list that still accepts free
+  text**. Plain free text fragments fast: "CPEN", "Computer Engineering", "comp eng", and "cpen
+  (co-op)" become four values within one cycle, and grouping in the export stops working. The seed
+  list normalises the common cases while unusual departments still get through, and nobody maintains
+  it. `quick-add-blob-combobox.tsx` in the resumegit project is the same pattern.
 
 ### Status values
 
@@ -249,17 +271,28 @@ Cheap to write, and it answers "who rejected this person and when" without a ded
 
 No login, no account. Email is the identifier.
 
-Routes: `/` lists open postings, `/apply/[team]` is the form.
+Routes: `/` lists open postings and describes the teams, `/apply` is the single form covering all of
+them.
 
-### Four steps, in this order
+### Steps, in this order
 
-1. **About you** — name, email, year of study, faculty, major, resume
-2. **Rank subteams** for that team
-3. **Questions** — core set, plus any subteam extras unlocked by the ranking
-4. **Review and submit**
+1. **About you** — name, email, year of study, home department
+2. **Core questions** — asked once, regardless of which teams they pick
+3. **Per team, one gate each** — "Do you want to apply to Mechanical?" If yes, that team's questions
+   render inline, including the subteam ranking if that posting enables it. If no, skip to the next
+   team. Teams appear in a fixed order; only `open` postings appear at all.
+4. **Resume upload** — once, shared by every row the submission creates
+5. **Review and submit**
 
-Ranking must precede questions because it drives `visibleIf`. Putting it last would mean
-re-rendering a form the applicant has already filled.
+Ranking sits inside its team's branch and before that team's questions, because it drives
+`visibleIf`. Putting it after would mean re-rendering questions the applicant has already answered.
+
+**On submit, one row per selected team**, all sharing a freshly generated `submission_id`,
+`resume_path`, and the shared answers. Each row gets its own snapshot of *that* posting's flattened
+question set — so mech's row carries mech's quiz, not software's.
+
+A submission selecting zero teams is rejected client- and server-side. It is the one genuinely
+ambiguous end state of a form built out of optional branches.
 
 ### Draft persistence
 
@@ -498,7 +531,17 @@ another team's applicants — this is not a hidden route.
 - Concrete `config` shapes for the `matrix` and `ranking` question types.
 - Whether Sailbot recruits graduate students. If so, `year_of_study` wants `masters` and `phd`
   rather than a single catch-all `grad`.
-- The seed list of common majors, and the faculty list in app config.
+- The seed list of common home departments (APSC, IGEN, MECH, ENPH, CPSC, …).
+- **The Operations team.** The site describes it as covering finance, marketing, public relations,
+  and industry outreach, at roughly six people — but the 2025 application form has no Operations
+  section at all, and no posting document exists. Unknown whether it recruits through a separate
+  process, has subteams, or should be a posting with none. **A team with zero subteams must not
+  break the form**: its branch simply renders no ranking step.
+- **A second file upload per question.** Software's technical quiz accepts either a public GitHub
+  URL or a ZIP upload, which the `file` question type currently does not model — the design assumed
+  one resume upload per submission and nothing else.
+- Whether the two "available in person every Saturday" confirmations (electrical and software, but
+  not mechanical) should become a core question, a per-team question, or stay duplicated.
 
 ---
 

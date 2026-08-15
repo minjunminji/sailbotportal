@@ -479,7 +479,11 @@ create table subteams (
   id          uuid primary key default gen_random_uuid(),
   team_id     uuid not null references teams(id) on delete cascade,
   name        text not null,
+  code        text,                                  -- PATH, NET, PWR; null for mech
   slug        text not null,
+  description text not null default '',
+  details     jsonb not null default '{}'::jsonb,    -- goal, projects, codebases
+  position    integer not null default 0,
   active      boolean not null default true,
   created_at  timestamptz not null default now(),
   unique (team_id, slug)
@@ -601,6 +605,8 @@ create table postings (
   requirements    text not null default '',
   status          text not null default 'draft' check (status in ('draft', 'open', 'closed')),
   question_schema jsonb not null default '[]'::jsonb,
+  subteam_ranking jsonb not null default '{"enabled": false, "maxChoices": 3}'::jsonb,
+  position        integer not null default 0,
   closes_at       timestamptz,
   created_by      uuid references profiles(id),
   created_at      timestamptz not null default now(),
@@ -650,12 +656,12 @@ supabase migration new applications
 create table applications (
   id                       uuid primary key default gen_random_uuid(),
   posting_id               uuid not null references postings(id) on delete cascade,
+  submission_id            uuid not null,   -- groups rows written by one submission
   applicant_name           text not null,
   applicant_email          text not null,
   year_of_study            text not null,   -- ordinal: '1'..'5', 'masters', 'phd'
-  faculty                  text not null,
-  major                    text,
-  resume_path              text,
+  home_department          text not null,   -- APSC, IGEN, MECH, ENPH, CPSC, ...
+  resume_path              text,            -- shared across the submission
   ranked_subteams          uuid[] not null default '{}',
   answers                  jsonb not null default '{}'::jsonb,
   question_schema_snapshot jsonb not null,
@@ -675,6 +681,7 @@ create unique index applications_posting_email_uniq
 
 create index applications_posting_status_idx on applications(posting_id, status);
 create index applications_email_idx on applications(lower(applicant_email));
+create index applications_submission_id_idx on applications(submission_id);
 
 -- Powers the days-in-column figure on the board card.
 create or replace function public.touch_status_changed_at()
@@ -848,10 +855,11 @@ beforeAll(async () => {
     .from('applications')
     .insert({
       posting_id: mechPostingId,
+      submission_id: crypto.randomUUID(),
       applicant_name: 'Mech Applicant',
       applicant_email: 'mech@student.ubc.ca',
       year_of_study: '3',
-      faculty: 'Applied Science',
+      home_department: 'MECH',
       question_schema_snapshot: [],
     })
     .select()
@@ -878,10 +886,11 @@ describe('anonymous access', () => {
   it('cannot insert an application directly', async () => {
     const { error } = await anonClient().from('applications').insert({
       posting_id: softPostingId,
+      submission_id: crypto.randomUUID(),
       applicant_name: 'Sneaky',
       applicant_email: 'sneaky@example.com',
       year_of_study: '1',
-      faculty: 'Arts',
+      home_department: 'CPSC',
       question_schema_snapshot: [],
     });
     expect(error).not.toBeNull();
@@ -1073,53 +1082,71 @@ git commit -m "Add RLS policies with integration tests proving team isolation"
 
 ```sql
 insert into teams (name, slug) values
-  ('Electrical', 'elec'),
   ('Mechanical', 'mech'),
+  ('Electrical', 'elec'),
   ('Software', 'soft'),
-  ('Business', 'business')
+  ('Operations', 'ops')
 on conflict (slug) do nothing;
 
-insert into subteams (team_id, name, slug)
-select t.id, s.name, s.slug
+-- Taken from the real team postings in docs/. Operations has no subteams:
+-- the site describes it as one ~6-person group, and no posting exists yet.
+insert into subteams (team_id, name, code, slug, position, description)
+select t.id, s.name, s.code, s.slug, s.position, s.description
 from teams t
 join (values
-  ('soft', 'Pathfinding', 'pathfinding'),
-  ('soft', 'Website', 'website'),
-  ('soft', 'Network Systems', 'network'),
-  ('soft', 'Controls', 'controls'),
-  ('elec', 'Power', 'power'),
-  ('elec', 'Embedded', 'embedded'),
-  ('mech', 'Hull', 'hull'),
-  ('mech', 'Rigging', 'rigging'),
-  ('business', 'Sponsorship', 'sponsorship'),
-  ('business', 'Marketing', 'marketing')
-) as s(team_slug, name, slug) on s.team_slug = t.slug
+  ('soft', 'Pathfinding', 'PATH', 'pathfinding', 0,
+   'The brain of the boat, responsible for determining an efficient route from start to finish using vector math, calculus, and path planning algorithms.'),
+  ('soft', 'Rudder and Wingsail Controller', 'CTRL', 'controller', 1,
+   'The virtual helmsman: turns abstract objectives such as a desired heading into commands for the rudder and sails, using control theory and physical modelling.'),
+  ('soft', 'Boat Simulator', 'SIM', 'simulator', 2,
+   'Mimics the real-world environment so software can be tested without a physical vessel, including a physics model of the boat and artificial sensor noise.'),
+  ('soft', 'Network Systems', 'NET', 'network-systems', 3,
+   'The software-hardware interface: a bridge for data and commands to travel between the two, working with the Electrical firmware team as much as the software team.'),
+  ('soft', 'Website', 'WEB', 'website', 4,
+   'The platform for data interactions to and from the vessel, serving team members, vessel operations, researchers, and the general public.'),
+  ('soft', 'DevOps', 'DevOps', 'devops', 5,
+   'Infrastructure as Code: development environments, CI/CD pipelines, and the docs site, so software deploys quickly, correctly, and consistently.'),
+
+  ('elec', 'Communications', 'COM', 'communications', 0,
+   'A robust communication network transmitting data, commands, and errors, spanning transmission lines, network interface PCBs, firmware, sensors, and message formats.'),
+  ('elec', 'Drive', 'DRV', 'drive', 1,
+   'The boat''s control systems: hardware and firmware controlling the rudder and wingsail, including PID control algorithms and critical pathfinding sensors.'),
+  ('elec', 'Power', 'PWR', 'power', 2,
+   'The boat''s power system: solar panels, power tracking, battery management, and the power budget that allocates a finite resource across every device.'),
+
+  ('mech', 'Sail', null, 'sail', 0,
+   'Construction of the wingsail, including the composite shell, the trim tab, and the internal structure.'),
+  ('mech', 'Rudder', null, 'rudder', 1,
+   'The rudder body and actuation mechanism, from CNC milling and composite layups through structural validation and integration with Hull and Electrical.'),
+  ('mech', 'Hull', null, 'hull', 2,
+   'Design and construction of the hull and keel using Maxsurf, SolidWorks, and Ansys, with heavy focus on composite fabrication and cross-team integration.')
+) as s(team_slug, name, code, slug, position, description) on s.team_slug = t.slug
 on conflict (team_id, slug) do nothing;
 
+-- Wording taken verbatim from the 2025 form. Note how SMALL the genuinely
+-- shared set is: name, email, year, and home department are built-in columns,
+-- which leaves exactly one shared question. Everything else on that form was
+-- team-specific. Resist padding this out — every key added here becomes a
+-- permanent export column for all four teams.
 insert into core_questions (stable_key, position, definition) values
   ('why_sailbot', 0, '{
      "type": "long_text",
-     "label": "What makes you interested in joining Sailbot?",
+     "label": "Briefly, describe yourself and why you would like to join UBC Sailbot",
+     "help": "Suggested under 50 words",
      "required": true,
-     "config": {"maxLength": 1500}
-   }'::jsonb),
-  ('hope_to_gain', 1, '{
-     "type": "long_text",
-     "label": "What do you hope to gain from the team?",
-     "required": true,
-     "config": {"maxLength": 1500}
-   }'::jsonb),
-  ('time_commitment', 2, '{
-     "type": "select",
-     "label": "How many hours per week can you commit?",
-     "required": true,
-     "config": {"options": ["under 5", "5-10", "10-15", "15+"]}
+     "config": {"maxLength": 600}
    }'::jsonb)
 on conflict (stable_key) do nothing;
 ```
 
-> The subteam list is a **guess based on the design doc**. Confirm the real subteams with Ryan
-> before this seed is treated as accurate.
+> Subteams, codes, and descriptions come from the real postings in `docs/`. **Operations is seeded
+> with no subteams and no posting** — its application did not exist on the 2025 form and its
+> structure is still unconfirmed. This is the case that proves a team with zero subteams must not
+> break the form.
+>
+> The per-team technical quizzes (mechanical's 11 questions, electrical's 8, software's skills
+> matrix and quiz submission) are **not** seeded here. They belong in `postings.question_schema` and
+> land with the posting builder in the next phase.
 
 **Step 2: Apply and verify**
 
@@ -1127,8 +1154,8 @@ on conflict (stable_key) do nothing;
 supabase db reset
 ```
 
-Then confirm counts in Supabase Studio at http://127.0.0.1:54323 — 4 teams, 10 subteams,
-3 core questions.
+Then confirm counts in Supabase Studio at http://127.0.0.1:54323 — **4 teams, 12 subteams
+(6 soft, 3 elec, 3 mech, 0 ops), 1 core question.**
 
 **Step 3: Commit**
 
@@ -1650,8 +1677,8 @@ git commit -m "Add admin auth with session refresh middleware"
 ```
 src/app/
   (public)/
-    page.tsx                      # open postings list
-    apply/[team]/page.tsx         # application form (placeholder)
+    page.tsx                      # open postings list, team descriptions
+    apply/page.tsx                # the single cross-team application form (placeholder)
   (admin)/
     login/page.tsx
     admin/
