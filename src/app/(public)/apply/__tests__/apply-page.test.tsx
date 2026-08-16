@@ -90,4 +90,9 @@ it('renders the form when a posting is open', async () => {
   expect(screen.queryByText('Recruiting is currently closed')).not.toBeInTheDocument();
   expect(screen.getByLabelText(/Full name/)).toBeInTheDocument();
   expect(screen.getByLabelText(/Why Sailbot/)).toBeInTheDocument();
+  // The team's own questions stay behind its gate until it is answered Yes.
+  expect(
+    screen.getByRole('group', { name: 'Do you want to apply to the Mechanical team?' }),
+  ).toBeInTheDocument();
+  expect(screen.queryByLabelText(/What is ballast/)).not.toBeInTheDocument();
 });

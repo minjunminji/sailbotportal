@@ -1,6 +1,6 @@
 import { isQuestionVisible } from '@/lib/questions/schema';
 import type { Question } from '@/lib/questions/types';
-import { rankedSlugs, type ApplyData, type FormState } from './types';
+import { rankedSlugs, type ApplyData, type ApplyPosting, type FormState } from './types';
 
 /**
  * Which questions the form shows.
@@ -11,6 +11,15 @@ import { rankedSlugs, type ApplyData, type FormState } from './types';
  * and a server that then demands it — an application nobody can submit and
  * nothing on screen to explain why.
  */
+
+/** A posting's own questions, filtered by the applicant's ranking of ITS subteams. */
+export function visibleTeamQuestions(
+  posting: ApplyPosting,
+  rankedSubteamIds: string[],
+): Question[] {
+  const ranked = rankedSlugs(posting, rankedSubteamIds);
+  return posting.questions.filter((question) => isQuestionVisible(question, ranked));
+}
 
 /**
  * Core questions are asked once but validated against every selected posting,

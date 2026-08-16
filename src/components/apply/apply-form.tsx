@@ -1,26 +1,51 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import type { Answer, AnswerMap } from '@/lib/questions/types';
+import type {
+  DuplicateTeam,
+  SubmissionInput,
+  SubmitResult,
+  SubmittedTeam,
+} from '@/app/actions/submit-application';
+import { isQuestionVisible } from '@/lib/questions/schema';
+import type { Answer, AnswerMap, Question } from '@/lib/questions/types';
+import { Confirmation } from './confirmation';
 import { ErrorSummary } from './error-summary';
 import { IdentitySection } from './identity-section';
 import { QuestionList } from './question-field';
+import { ResumeUpload } from './resume-upload';
+import { ReviewSection } from './review-section';
 import { clearDraft, loadDraft, saveDraft } from './storage';
-import { coreFieldId, emptyFormState, type ApplyData, type FormState } from './types';
-import { errorMap, validateForm, type FieldError } from './validate';
+import { TeamSection } from './team-section';
+import {
+  coreFieldId,
+  emptyFormState,
+  rankedSlugs,
+  type ApplyData,
+  type ApplyPosting,
+  type FormState,
+} from './types';
+import { errorMap, mapServerIssues, validateForm, type FieldError } from './validate';
 import { visibleCoreQuestions } from './visibility';
 
 /**
- * The applicant-facing form: one form covering every open team.
+ * The whole applicant-facing form: one form covering every open team.
  *
  * State lives here rather than in a store or in the URL. It is one screen, it
  * is thrown away on success, and the only thing that has to outlive a refresh
  * is the draft — which `./storage` handles on its own.
  *
- * This is the shared half: who is applying, and the questions every team asks.
- * The per-team branches and the submission hang off the same state.
+ * The submit action arrives as a prop rather than being imported. That keeps
+ * the server module out of the client bundle graph for tests, and makes the one
+ * side effect this component has visible in its signature.
  */
-export function ApplyForm({ data }: { data: ApplyData }) {
+export function ApplyForm({
+  data,
+  submit,
+}: {
+  data: ApplyData;
+  submit: (input: SubmissionInput) => Promise<SubmitResult>;
+}) {
   const initial = useMemo(() => emptyFormState(data), [data]);
 
   /**
@@ -51,9 +76,23 @@ export function ApplyForm({ data }: { data: ApplyData }) {
   const state = edited ?? draft ?? initial;
   const hadDraft = draft !== null && !startedOver;
 
+  const [phase, setPhase] = useState<'form' | 'review'>('form');
   const [errors, setErrors] = useState<FieldError[]>([]);
+  const [failure, setFailure] = useState<{
+    message: string;
+    duplicateTeams?: DuplicateTeam[];
+  } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState<{ teams: SubmittedTeam[]; email: string } | null>(
+    null,
+  );
+
+  // Bots fill every input they can see. This one is hidden from people and from
+  // assistive technology, so anything in it is not a person.
+  const [honeypot, setHoneypot] = useState('');
 
   const summaryHeading = useRef<HTMLHeadingElement>(null);
+  const confirmationRef = useRef<HTMLDivElement>(null);
   /** Field to move focus to after the next render, once errors are on screen. */
   const focusTarget = useRef<string | null>(null);
 
@@ -77,6 +116,7 @@ export function ApplyForm({ data }: { data: ApplyData }) {
   });
 
   const fieldErrors = errorMap(errors);
+  const selectedPostings = data.postings.filter((posting) => state.teams[posting.slug]?.selected);
 
   function update(change: (previous: FormState) => FormState) {
     setEdited((previous) => change(previous ?? draft ?? initial));
@@ -86,11 +126,67 @@ export function ApplyForm({ data }: { data: ApplyData }) {
     const found = validateForm(data, state);
     setErrors(found);
     if (found.length > 0) {
+      setFailure(null);
       // The summary is rendered above the form; focus goes to the first field
       // that needs work, which is what someone can act on immediately.
       focusTarget.current = found[0].fieldId;
     }
     return found;
+  }
+
+  function handleReview() {
+    if (check().length > 0) return;
+    setPhase('review');
+    window.scrollTo?.({ top: 0 });
+  }
+
+  async function handleSubmit() {
+    if (submitting) return;
+    if (check().length > 0) {
+      setPhase('form');
+      return;
+    }
+
+    setSubmitting(true);
+    setFailure(null);
+    try {
+      const result = await submit(buildSubmission(data, state, honeypot));
+
+      if (result.ok) {
+        clearDraft();
+        setSubmitted({ teams: result.teams, email: state.email.trim() });
+        return;
+      }
+
+      const mapped = mapServerIssues(data, result.issues);
+      setErrors(mapped);
+      setFailure({ message: result.message, duplicateTeams: result.duplicateTeams });
+      setPhase('form');
+      if (mapped.length > 0) focusTarget.current = mapped[0].fieldId;
+      else summaryHeading.current?.focus();
+    } catch {
+      // A server action can fail before it returns anything — a dropped
+      // connection, a deploy mid-request. The draft is still saved, so retrying
+      // costs nothing.
+      setErrors([]);
+      setFailure({ message: 'Your application could not be sent. Try again in a moment.' });
+      setPhase('form');
+      summaryHeading.current?.focus();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  useEffect(() => {
+    if (submitted) confirmationRef.current?.querySelector('h1')?.focus();
+  }, [submitted]);
+
+  if (submitted) {
+    return (
+      <div ref={confirmationRef}>
+        <Confirmation teams={submitted.teams} email={submitted.email} />
+      </div>
+    );
   }
 
   return (
@@ -100,15 +196,34 @@ export function ApplyForm({ data }: { data: ApplyData }) {
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
-        check();
+        void handleSubmit();
       }}
     >
       {/* In the DOM before it has content, so filling it is announced. */}
       <div aria-live="assertive" className="empty:hidden">
-        <ErrorSummary errors={errors} headingRef={summaryHeading} />
+        <ErrorSummary errors={errors} message={failure?.message} headingRef={summaryHeading}>
+          {failure?.duplicateTeams && failure.duplicateTeams.length > 0 ? (
+            <>
+              <p>
+                An application already exists for {state.email.trim()} on{' '}
+                {failure.duplicateTeams.length === 1 ? 'this team' : 'these teams'}:
+              </p>
+              <ul className="mt-2 list-disc pl-6">
+                {failure.duplicateTeams.map((team) => (
+                  <li key={team.postingSlug}>{team.teamName || team.postingSlug}</li>
+                ))}
+              </ul>
+              <p className="mt-2">
+                Answer No for {failure.duplicateTeams.length === 1 ? 'that team' : 'those teams'}{' '}
+                and submit again, or email the team if you need to change an application you already
+                sent.
+              </p>
+            </>
+          ) : null}
+        </ErrorSummary>
       </div>
 
-      {hadDraft ? (
+      {hadDraft && phase === 'form' ? (
         <div className="mt-6 rounded-lg border border-border bg-card p-4 text-card-foreground">
           <p className="text-sm text-muted-foreground">
             We restored what you had already written on this device.
@@ -120,6 +235,7 @@ export function ApplyForm({ data }: { data: ApplyData }) {
               setEdited(initial);
               setStartedOver(true);
               setErrors([]);
+              setFailure(null);
             }}
             className="mt-2 rounded-md border border-border px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
           >
@@ -128,52 +244,144 @@ export function ApplyForm({ data }: { data: ApplyData }) {
         </div>
       ) : null}
 
-      <div className="mt-8 flex flex-col gap-12">
-        <IdentitySection
-          name={state.name}
-          email={state.email}
-          yearOfStudy={state.yearOfStudy}
-          homeDepartment={state.homeDepartment}
-          errors={fieldErrors}
-          onChange={(field, value) => update((previous) => ({ ...previous, [field]: value }))}
-        />
+      {phase === 'review' ? (
+        <div className="mt-8">
+          <ReviewSection data={data} state={state} onEdit={() => setPhase('form')} />
+        </div>
+      ) : (
+        <div className="mt-8 flex flex-col gap-12">
+          <IdentitySection
+            name={state.name}
+            email={state.email}
+            yearOfStudy={state.yearOfStudy}
+            homeDepartment={state.homeDepartment}
+            errors={fieldErrors}
+            disabled={submitting}
+            onChange={(field, value) => update((previous) => ({ ...previous, [field]: value }))}
+          />
 
-        {visibleCoreQuestions(data, state).length > 0 ? (
-          <section aria-labelledby="shared-questions-heading">
-            <h2 id="shared-questions-heading" className="text-lg font-semibold">
-              About your interest in Sailbot
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Asked once, whichever teams you apply to.
-            </p>
-            <div className="mt-6">
-              <QuestionList
-                questions={visibleCoreQuestions(data, state)}
-                fieldIdFor={coreFieldId}
-                answers={state.coreAnswers}
+          {visibleCoreQuestions(data, state).length > 0 ? (
+            <section aria-labelledby="shared-questions-heading">
+              <h2 id="shared-questions-heading" className="text-lg font-semibold">
+                About your interest in Sailbot
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Asked once, whichever teams you apply to.
+              </p>
+              <div className="mt-6">
+                <QuestionList
+                  questions={visibleCoreQuestions(data, state)}
+                  fieldIdFor={coreFieldId}
+                  answers={state.coreAnswers}
+                  errors={fieldErrors}
+                  disabled={submitting}
+                  // A core `file` question would be resolved against any open
+                  // posting; the route checks the question really belongs to it.
+                  uploadPostingSlug={data.postings[0]?.slug ?? ''}
+                  onAnswer={(questionId, value) =>
+                    update((previous) => ({
+                      ...previous,
+                      coreAnswers: writeAnswer(previous.coreAnswers, questionId, value),
+                    }))
+                  }
+                />
+              </div>
+            </section>
+          ) : null}
+
+          <div id="team-selection" className="flex flex-col gap-12">
+            {data.postings.map((posting) => (
+              <TeamSection
+                key={posting.slug}
+                posting={posting}
+                state={state.teams[posting.slug]}
                 errors={fieldErrors}
-                // A core `file` question would be resolved against any open
-                // posting; the route checks the question really belongs to it.
-                uploadPostingSlug={data.postings[0]?.slug ?? ''}
+                disabled={submitting}
+                onSelect={(selected) =>
+                  update((previous) => ({
+                    ...previous,
+                    teams: {
+                      ...previous.teams,
+                      [posting.slug]: { ...previous.teams[posting.slug], selected },
+                    },
+                  }))
+                }
+                onRank={(rankedSubteams) =>
+                  update((previous) => ({
+                    ...previous,
+                    teams: {
+                      ...previous.teams,
+                      [posting.slug]: { ...previous.teams[posting.slug], rankedSubteams },
+                    },
+                  }))
+                }
                 onAnswer={(questionId, value) =>
                   update((previous) => ({
                     ...previous,
-                    coreAnswers: writeAnswer(previous.coreAnswers, questionId, value),
+                    teams: {
+                      ...previous.teams,
+                      [posting.slug]: {
+                        ...previous.teams[posting.slug],
+                        answers: writeAnswer(
+                          previous.teams[posting.slug].answers,
+                          questionId,
+                          value,
+                        ),
+                      },
+                    },
                   }))
                 }
               />
-            </div>
-          </section>
-        ) : null}
+            ))}
+          </div>
+
+          <ResumeUpload
+            resume={state.resume}
+            error={fieldErrors.get('resume-upload')}
+            disabled={submitting}
+            onChange={(resume) => update((previous) => ({ ...previous, resume }))}
+          />
+        </div>
+      )}
+
+      {/* Hidden from sight and from assistive technology; never focusable. */}
+      <div className="sr-only" aria-hidden="true">
+        <label htmlFor="website-field">Leave this field empty</label>
+        <input
+          id="website-field"
+          name="website"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          value={honeypot}
+          onChange={(event) => setHoneypot(event.target.value)}
+        />
       </div>
 
-      <div className="mt-12">
-        <button
-          type="submit"
-          className="rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
-        >
-          Check your answers
-        </button>
+      <div className="mt-12 flex flex-wrap gap-4">
+        {phase === 'form' ? (
+          <button
+            type="button"
+            onClick={handleReview}
+            disabled={submitting}
+            className="rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50"
+          >
+            Review your application
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={submitting}
+            className="rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50"
+          >
+            {submitting ? 'Sending…' : 'Submit application'}
+          </button>
+        )}
+        <p className="self-center text-sm text-muted-foreground">
+          {selectedPostings.length === 0
+            ? 'No teams chosen yet.'
+            : `Applying to ${selectedPostings.map((posting) => posting.teamName).join(', ')}.`}
+        </p>
       </div>
     </form>
   );
@@ -190,15 +398,63 @@ function noDraft(): FormState | null {
 }
 
 /** Writing `undefined` removes the key, so an unanswered question stays absent. */
-export function writeAnswer(
-  answers: AnswerMap,
-  questionId: string,
-  value: Answer | undefined,
-): AnswerMap {
+function writeAnswer(answers: AnswerMap, questionId: string, value: Answer | undefined): AnswerMap {
   const next = { ...answers };
   if (value === undefined) delete next[questionId];
   else next[questionId] = value;
   return next;
+}
+
+/** Answers for the questions that are actually on screen for this ranking. */
+function visibleAnswers(
+  questions: Question[],
+  answers: AnswerMap,
+  ranked: string[],
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const question of questions) {
+    if (!isQuestionVisible(question, ranked)) continue;
+    const value = answers[question.id];
+    if (value !== undefined) out[question.id] = value;
+  }
+  return out;
+}
+
+/**
+ * The payload for one submission.
+ *
+ * Core answers are merged into EVERY selected team, because each team's row
+ * carries its own snapshot of core questions plus its own. Answers to questions
+ * the ranking hid are left out rather than sent: they would be stored on the
+ * application and read by a lead as something the applicant meant to say.
+ */
+export function buildSubmission(data: ApplyData, state: FormState, honeypot = ''): SubmissionInput {
+  const selected: ApplyPosting[] = data.postings.filter(
+    (posting) => state.teams[posting.slug]?.selected,
+  );
+
+  return {
+    name: state.name.trim(),
+    email: state.email.trim(),
+    yearOfStudy: state.yearOfStudy,
+    homeDepartment: state.homeDepartment.trim(),
+    resumePath: state.resume?.path ?? null,
+    honeypot,
+    teams: selected.map((posting) => {
+      const team = state.teams[posting.slug];
+      const ranked = rankedSlugs(posting, team.rankedSubteams);
+      return {
+        postingSlug: posting.slug,
+        answers: {
+          ...visibleAnswers(data.coreQuestions, state.coreAnswers, ranked),
+          ...visibleAnswers(posting.questions, team.answers, ranked),
+        },
+        // A team that does not rank subteams must send an empty list: the
+        // server treats anything else as a payload this form could not produce.
+        rankedSubteams: posting.ranking.enabled ? team.rankedSubteams : [],
+      };
+    }),
+  };
 }
 
 /**
@@ -209,7 +465,7 @@ export function writeAnswer(
  * focusable for the purpose, which is how a group of radios or a matrix gets
  * focus at all.
  */
-export function focusField(fieldId: string): void {
+function focusField(fieldId: string): void {
   const container = document.getElementById(fieldId);
   if (!container) return;
 

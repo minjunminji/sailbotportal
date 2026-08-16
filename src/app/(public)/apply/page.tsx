@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { submitApplication } from '@/app/actions/submit-application';
 import { ApplyForm } from '@/components/apply/apply-form';
 import type { ApplyData, ApplyPosting, ApplySubteam } from '@/components/apply/types';
 import { EmptyState } from '@/components/empty-state';
@@ -178,7 +179,7 @@ export default async function ApplyPage() {
             teams you want to apply to, and answer the questions those teams ask. Your answers are
             saved on this device as you type, so you can come back to them.
           </p>
-          <ApplyForm data={data} />
+          <ApplyForm data={data} submit={submitApplication} />
         </>
       )}
     </main>
