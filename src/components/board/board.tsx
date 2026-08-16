@@ -162,6 +162,13 @@ export function Board({
       </div>
 
       <DndContext
+        // An explicit id, or dnd-kit names its accessibility description from
+        // an internal counter that starts fresh on the server and continues
+        // from wherever the client happens to be — producing
+        // `aria-describedby="DndDescribedBy-0"` in the HTML and
+        // `DndDescribedBy-11` after hydration, which React reports as a
+        // mismatch and refuses to patch. A stable id makes both sides agree.
+        id="board"
         sensors={sensors}
         // `pointerWithin` rather than the default rectangle intersection: a card
         // is nearly as wide as a column, so with rectangles a drag that has
@@ -173,7 +180,17 @@ export function Board({
         onDragEnd={handleDragEnd}
         onDragCancel={() => setDraggingId(null)}
       >
-        <div className="flex min-h-0 min-w-0 flex-1 gap-3 overflow-auto pb-2">
+        {/* `relative` is load-bearing, not cosmetic. `overflow` does NOT clip an
+            absolutely positioned descendant whose containing block lies outside
+            the scroll container — and Tailwind's `sr-only` is
+            `position: absolute`. With no positioned ancestor here, all 38 of
+            the board's screen-reader spans resolved against the initial
+            containing block, escaped this clip, and extended the DOCUMENT to
+            the full width of eight columns. The result was a page that scrolled
+            sideways into blank space with nothing visible out there.
+            Making this the containing block clips them along with everything
+            else. Any scroll pane holding `sr-only` text needs the same. */}
+        <div className="relative flex min-h-0 min-w-0 flex-1 gap-3 overflow-auto pb-2">
           {BOARD_COLUMNS.map((column) => (
             <BoardColumn
               key={column.status}
