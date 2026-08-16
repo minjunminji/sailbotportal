@@ -190,20 +190,31 @@ export function Board({
             sideways into blank space with nothing visible out there.
             Making this the containing block clips them along with everything
             else. Any scroll pane holding `sr-only` text needs the same. */}
-        <div className="relative flex min-h-0 min-w-0 flex-1 gap-3 overflow-auto pb-2">
-          {BOARD_COLUMNS.map((column) => (
-            <BoardColumn
-              key={column.status}
-              status={column.status}
-              label={column.label}
-              cards={grouped[column.status]}
-              teamSlug={teamSlug}
-              now={now}
-              subteamsById={subteamsById}
-              collapsed={collapsed.has(column.status)}
-              onToggle={() => toggle(column.status)}
-            />
-          ))}
+        {/* One scroller for the whole board, both directions.
+            `relative` is load-bearing: see the note on `sr-only` below. */}
+        <div className="relative min-h-0 min-w-0 flex-1 overflow-auto pb-2">
+          {/* The row is sized to its TALLEST column (`h-max`) rather than to
+              the visible area, so every column's border runs the full height of
+              the content instead of stopping partway down while its cards
+              carry on past it. `align-items: stretch` — the default — then
+              gives every column that same height, so short columns match the
+              longest one. `min-h-full` keeps them filling the board when no
+              column is tall enough to need scrolling at all. */}
+          <div className="flex h-max min-h-full gap-3">
+            {BOARD_COLUMNS.map((column) => (
+              <BoardColumn
+                key={column.status}
+                status={column.status}
+                label={column.label}
+                cards={grouped[column.status]}
+                teamSlug={teamSlug}
+                now={now}
+                subteamsById={subteamsById}
+                collapsed={collapsed.has(column.status)}
+                onToggle={() => toggle(column.status)}
+              />
+            ))}
+          </div>
         </div>
 
         {/* The card follows the cursor from here rather than moving in place,

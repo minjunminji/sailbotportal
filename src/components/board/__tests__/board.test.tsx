@@ -114,6 +114,24 @@ describe('columns', () => {
     expect(rejected).toHaveAccessibleName('Rejected column, 1 applicant');
   });
 
+  it('names the collapse control even though it is only an icon', () => {
+    // The button shows a fold glyph and no words. If a refactor drops the
+    // `sr-only` label the button becomes anonymous to a screen reader, and
+    // nothing about the page looks any different.
+    renderBoard();
+
+    const collapse = screen.getByRole('button', { name: 'Collapse Applied column' });
+    expect(collapse).toHaveTextContent(/^Collapse Applied column$/);
+    expect(collapse.querySelector('svg')).not.toBeNull();
+  });
+
+  it('names the expand control on a folded strip', () => {
+    renderBoard();
+
+    const expand = screen.getByRole('button', { name: /Expand Rejected column/ });
+    expect(expand.querySelector('svg')).not.toBeNull();
+  });
+
   it('expands a folded column and folds it again', async () => {
     renderBoard();
 
