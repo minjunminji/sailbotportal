@@ -70,13 +70,17 @@ export function DetailPanes({ answers, resume }: { answers: ReactNode; resume: R
           {answers}
         </div>
 
+        {/* No width cap. Extra room goes to the resume rather than to the
+            answers, which are capped at a readable measure instead — a line of
+            prose 900px long is harder to read than one at 600px, while a PDF
+            only gets better with the space. */}
         <div
           role="tabpanel"
           id={ids.resumePanel}
           aria-labelledby={ids.resumeTab}
-          className={`min-w-0 flex-1 overflow-y-auto ${
-            tab === 'resume' ? '' : 'hidden'
-          } lg:block lg:max-w-lg`}
+          // `min-h-0` so the viewer inside can own its own scrolling rather
+          // than stretching this panel to the height of a zoomed-in page.
+          className={`flex min-h-0 min-w-0 flex-1 ${tab === 'resume' ? '' : 'hidden'} lg:flex`}
         >
           {resume}
         </div>

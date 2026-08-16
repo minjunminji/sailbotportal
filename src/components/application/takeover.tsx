@@ -52,7 +52,7 @@ export function Takeover({ label, children }: { label: string; children: ReactNo
       // Tailwind's preflight resets to 0 — without this it sits in the
       // top-left corner. `max-h-none` overrides the user agent's default cap
       // for the same reason.
-      className="fixed inset-0 m-auto h-[88vh] max-h-none w-[92vw] max-w-[1100px] rounded-lg border border-border bg-background p-0 text-foreground shadow-lg backdrop:bg-black/50"
+      className="fixed inset-0 m-auto h-[90vh] max-h-none w-[94vw] max-w-[1440px] rounded-lg border border-border bg-background p-0 text-foreground shadow-lg backdrop:bg-black/50"
     >
       {/* Padding lives here rather than on the dialog, so a click landing just
           inside the edge still counts as content and not as "outside". */}

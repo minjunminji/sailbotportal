@@ -136,7 +136,11 @@ function Answers({ detail }: { detail: Detail }) {
   }
 
   return (
-    <dl className="flex flex-col gap-6 pr-2">
+    // Capped at a readable measure. The pane grew with the modal, and prose
+    // set to the full width of it is measurably harder to read than prose at
+    // roughly seventy characters — the eye loses its place returning to the
+    // start of the next line.
+    <dl className="flex max-w-[72ch] flex-col gap-6 pr-2">
       {detail.questions.map((entry, index) =>
         entry.ok ? (
           <div key={entry.question.id}>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 // Type-only, so it is erased at build and does not drag pdf.js into any bundle
 // that merely mentions this component.
 import type { PDFDocumentLoadingTask } from 'pdfjs-dist';
@@ -15,11 +15,13 @@ import type { PDFDocumentLoadingTask } from 'pdfjs-dist';
  * whole Chrome PDF application inside the pane, a second toolbar and thumbnail
  * rail competing with our own UI. Neither is detectable from script, so the app
  * could not even fall back. Rendering the pages ourselves is the only way the
- * pane looks the same for everybody.
+ * pane looks the same for everybody — and the only way zoom can be ours.
  *
- * `pdfjs-dist` is a real dependency and not a small one, but it loads only on
- * this route — the board and the public apply form never import it — and it is
- * the same engine Firefox ships as its built-in viewer.
+ * ZOOMING RE-RASTERISES rather than scaling the canvas with a CSS transform.
+ * A transform is instant and free, and it also means zooming in enlarges pixels
+ * that were rendered for a smaller box, so the text goes soft exactly when
+ * somebody is squinting at it. Re-rendering at the new scale is the reason to
+ * have a real PDF engine here at all.
  *
  * THE PAGES ARE BUILT IMPERATIVELY. pdf.js draws into a canvas and positions a
  * text layer against it; both are DOM it owns. React manages the shell and gets
@@ -27,10 +29,24 @@ import type { PDFDocumentLoadingTask } from 'pdfjs-dist';
  * to hold the output.
  */
 
-type Status = 'loading' | 'ready' | 'empty' | 'error';
+type Status = 'loading' | 'ready' | 'error';
+
+/** Zoom stops, rather than a continuous scale: each one is a re-render. */
+const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3] as const;
+/** `1` is fit-to-width, which is where the viewer opens. */
+const FIT_INDEX = ZOOM_STEPS.indexOf(1);
 
 /** Beyond this, more pixels stop being visible and start being memory. */
 const MAX_DEVICE_SCALE = 2;
+/**
+ * A ceiling on total rasterisation, in multiples of the PDF's natural size.
+ *
+ * Without it, zoom 3 on a retina screen asks for a canvas six times the page in
+ * each direction — roughly 78MB of bitmap per page, per render. Capping the
+ * product means zooming in trades a little sharpness for not exhausting memory
+ * on a laptop with twenty applications opened over an afternoon.
+ */
+const MAX_RASTER_SCALE = 4;
 
 export function ResumeViewer({
   applicationId,
@@ -44,11 +60,15 @@ export function ResumeViewer({
   const src = `/api/resume/${applicationId}`;
   const scrollRef = useRef<HTMLDivElement>(null);
   const pagesRef = useRef<HTMLDivElement>(null);
-  const [status, setStatus] = useState<Status>(hasResume ? 'loading' : 'empty');
+  const [status, setStatus] = useState<Status>('loading');
   const [width, setWidth] = useState(0);
+  const [zoomIndex, setZoomIndex] = useState(FIT_INDEX);
+  const zoom = ZOOM_STEPS[zoomIndex];
 
-  // The pane's width decides the render scale, so it has to be known before
-  // anything is drawn and re-read when the window changes.
+  // The pane's width sets the fit-to-width scale, so it has to be known before
+  // anything is drawn and re-read when the window changes. Measured on the
+  // scroll container's content box, so it stays the visible width even once
+  // zooming has made the content wider than it.
   useEffect(() => {
     const element = scrollRef.current;
     if (!element) return;
@@ -62,6 +82,31 @@ export function ResumeViewer({
     observer.observe(element);
     return () => observer.disconnect();
   }, [hasResume]);
+
+  const stepZoom = useCallback((direction: -1 | 1) => {
+    setZoomIndex((current) => {
+      const next = current + direction;
+      return next < 0 || next >= ZOOM_STEPS.length ? current : next;
+    });
+  }, []);
+
+  // Ctrl/Cmd + wheel, the gesture every document viewer has trained people to
+  // expect. Bound natively rather than through React's `onWheel` because the
+  // browser's own page zoom has to be prevented, and React attaches wheel
+  // listeners passively — where `preventDefault` does nothing.
+  useEffect(() => {
+    const element = scrollRef.current;
+    if (!element || !hasResume) return;
+
+    function onWheel(event: WheelEvent) {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      stepZoom(event.deltaY < 0 ? 1 : -1);
+    }
+
+    element.addEventListener('wheel', onWheel, { passive: false });
+    return () => element.removeEventListener('wheel', onWheel);
+  }, [hasResume, stepZoom]);
 
   useEffect(() => {
     if (!hasResume || width === 0) return;
@@ -94,17 +139,24 @@ export function ResumeViewer({
 
         const container = pagesRef.current;
         if (!container) return;
-        container.replaceChildren();
 
-        const deviceScale = Math.min(window.devicePixelRatio || 1, MAX_DEVICE_SCALE);
+        // Drawn into a fragment and swapped in at the end, so the pane never
+        // shows a half-rendered document while a zoom is being applied.
+        const rendered = window.document.createDocumentFragment();
 
         for (let number = 1; number <= doc.numPages; number += 1) {
           const page = await doc.getPage(number);
           if (cancelled) return;
 
           const unscaled = page.getViewport({ scale: 1 });
-          const scale = width / unscaled.width;
+          const scale = (width / unscaled.width) * zoom;
           const viewport = page.getViewport({ scale });
+
+          const deviceScale = Math.min(
+            window.devicePixelRatio || 1,
+            MAX_DEVICE_SCALE,
+            MAX_RASTER_SCALE / scale,
+          );
 
           const sheet = window.document.createElement('div');
           sheet.className = 'relative bg-white shadow-sm';
@@ -128,7 +180,7 @@ export function ResumeViewer({
           textLayer.style.setProperty('--scale-factor', String(scale));
           sheet.append(textLayer);
 
-          container.append(sheet);
+          rendered.append(sheet);
 
           await page.render({
             canvas,
@@ -147,7 +199,9 @@ export function ResumeViewer({
           await text.render();
         }
 
-        if (!cancelled) setStatus('ready');
+        if (cancelled) return;
+        container.replaceChildren(rendered);
+        setStatus('ready');
       } catch (error) {
         if (cancelled) return;
         console.error('[resume] render failed', error);
@@ -161,7 +215,7 @@ export function ResumeViewer({
       // applications in a sitting keeps twenty documents alive.
       void task?.destroy();
     };
-  }, [src, width, hasResume]);
+  }, [src, width, zoom, hasResume]);
 
   if (!hasResume) {
     return (
@@ -173,11 +227,61 @@ export function ResumeViewer({
     );
   }
 
+  const controlClasses =
+    'rounded-md px-2 py-1 text-sm text-muted-foreground hover:text-foreground ' +
+    'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ' +
+    'focus-visible:ring-offset-background disabled:opacity-40 disabled:hover:text-muted-foreground';
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => stepZoom(-1)}
+          disabled={zoomIndex === 0}
+          aria-label="Zoom out"
+          className={controlClasses}
+        >
+          &minus;
+        </button>
+        {/* Announced as a live value, so zooming by keyboard says what it did. */}
+        <span aria-live="polite" className="w-12 text-center text-sm tabular-nums">
+          {Math.round(zoom * 100)}%
+        </span>
+        <button
+          type="button"
+          onClick={() => stepZoom(1)}
+          disabled={zoomIndex === ZOOM_STEPS.length - 1}
+          aria-label="Zoom in"
+          className={controlClasses}
+        >
+          +
+        </button>
+        <button
+          type="button"
+          onClick={() => setZoomIndex(FIT_INDEX)}
+          disabled={zoomIndex === FIT_INDEX}
+          className={controlClasses}
+        >
+          Fit
+        </button>
+
+        {/* Permanent rather than shown on failure: it is also the way to get
+            the file itself, and the way out of anything the renderer gets
+            wrong. */}
+        <a
+          href={`${src}?download`}
+          className="ml-auto rounded-sm text-sm text-muted-foreground underline underline-offset-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          Download
+        </a>
+      </div>
+
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border bg-muted p-3"
+        // Scrolls in BOTH directions: once zoomed past the pane the page is
+        // wider than the box, and panning is that scroll.
+        className="min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-muted p-3"
         aria-label={`Resume from ${applicantName}`}
       >
         {status === 'loading' ? (
@@ -190,17 +294,13 @@ export function ResumeViewer({
           </p>
         ) : null}
 
-        <div ref={pagesRef} className="flex flex-col items-center gap-3" />
+        {/* `w-max` with `min-w-full`, not just `items-center`. Centring alone
+            makes content wider than the container overflow past its left edge,
+            where scrolling cannot reach it. Sizing this to the widest page and
+            at least the container keeps the whole page scrollable at any
+            zoom. */}
+        <div ref={pagesRef} className="flex w-max min-w-full flex-col items-center gap-3" />
       </div>
-
-      {/* Permanent rather than shown on failure: it is also the way to get the
-          file itself, and the way out of anything the renderer gets wrong. */}
-      <a
-        href={`${src}?download`}
-        className="self-start rounded-sm text-sm text-muted-foreground underline underline-offset-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-      >
-        Download resume
-      </a>
     </div>
   );
 }
