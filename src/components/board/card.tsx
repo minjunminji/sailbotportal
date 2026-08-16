@@ -86,7 +86,12 @@ export function BoardCard({
             type="button"
             {...attributes}
             {...listeners}
-            className="ml-auto cursor-grab rounded-md border border-border px-2 py-1 text-sm text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+            // No resting border: the handle sits on a card that already has
+            // one, and a box around a grip reads as a button to press rather
+            // than a thing to drag. The ring is `focus-visible` so it appears
+            // for the keyboard — which is the only way to reach the handle
+            // without a pointer — and not on every mouse-down.
+            className="ml-auto cursor-grab rounded-md px-2 py-1 text-sm text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <span aria-hidden="true">⠿</span>
             <span className="sr-only">Move {card.applicantName}</span>

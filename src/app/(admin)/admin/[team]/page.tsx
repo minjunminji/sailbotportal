@@ -65,7 +65,10 @@ export default async function TeamBoardPage({ params, searchParams }: PageProps<
   const ranking = posting.subteam_ranking as { enabled?: boolean } | null;
 
   return (
-    <main className="flex h-full min-h-0 flex-col gap-4 p-6">
+    // `min-w-0` as well as `min-h-0`: a flex item's automatic minimum size is
+    // its CONTENT's size, so without this the eight columns would widen the
+    // page instead of scrolling inside the board.
+    <main className="flex h-full min-h-0 min-w-0 flex-col gap-4 p-6">
       <div>
         {heading}
         <p className="mt-2 text-base text-muted-foreground">

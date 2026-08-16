@@ -59,7 +59,15 @@ export default async function AdminLayout({ children }: LayoutProps<'/admin'>) {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</div>
+      {/* `overflow-x-hidden` is spelled out rather than left to default. With
+          only `overflow-y-auto`, CSS computes the visible axis to `auto` as
+          well, so this wrapper quietly became a second horizontal scroll
+          container and the whole page scrolled sideways behind the board's own
+          scrollbar. Screens that need horizontal room scroll inside themselves,
+          the way the board does. */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+        {children}
+      </div>
     </div>
   );
 }
