@@ -272,22 +272,25 @@ function noteCountOf(row: BoardRow): number {
  *
  * @param postingId which board.
  * @param filters   from the URL, via `parseBoardFilters`.
- * @param client    optional, and always the CALLER'S client — the request's
- *                  cookie-backed session by default. RLS is what scopes this to
- *                  their team, so a service-role client here would hand one
- *                  team's board every other team's applicants. Tests pass a
- *                  signed-in client directly, which is the only way to assert
- *                  that scoping from this side of the query.
+ * @param supabase  REQUIRED, and always the CALLER'S client — in a page, the
+ *                  one built from the request's cookies. RLS is what scopes
+ *                  this to their team, so a service-role client here would hand
+ *                  one team's board every other team's applicants.
+ *
+ *                  Required rather than defaulted for two reasons. It puts the
+ *                  rule above in the type system instead of in a comment: there
+ *                  is no way to call this and simply not think about which
+ *                  identity the query runs as. And it keeps this module free of
+ *                  any runtime import of `@/lib/supabase/server`, which imports
+ *                  `next/headers` — a bundler follows even a dynamic import, so
+ *                  a client component importing `parseBoardFilters` from here
+ *                  would otherwise fail the build.
  */
 export async function getBoardApplications(
   postingId: string,
-  filters: BoardFilters = EMPTY_BOARD_FILTERS,
-  client?: SupabaseClient<Database>,
+  filters: BoardFilters,
+  supabase: SupabaseClient<Database>,
 ): Promise<BoardCard[]> {
-  // Imported lazily so this module can be used from a test or a script without
-  // dragging `next/headers` — and its request context — in behind it.
-  const supabase = client ?? (await (await import('@/lib/supabase/server')).createClient());
-
   let query = supabase
     .from('applications')
     .select(

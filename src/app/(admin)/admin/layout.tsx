@@ -26,8 +26,11 @@ export default async function AdminLayout({ children }: LayoutProps<'/admin'>) {
       : (teams ?? []);
 
   return (
-    <div className="flex flex-1">
-      <aside className="w-64 shrink-0 border-r border-border p-6">
+    // A fixed-height app shell, not a page that grows. The board needs a region
+    // with a real height so its columns can scroll sideways under sticky
+    // headers; every other admin screen simply scrolls inside the same region.
+    <div className="flex h-dvh">
+      <aside className="w-64 shrink-0 overflow-y-auto border-r border-border p-6">
         <p className="text-sm font-semibold">Sailbot hiring</p>
 
         <nav aria-label="Admin sections" className="mt-6 flex flex-col gap-1">
@@ -56,7 +59,7 @@ export default async function AdminLayout({ children }: LayoutProps<'/admin'>) {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</div>
     </div>
   );
 }
