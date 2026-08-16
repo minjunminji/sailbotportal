@@ -2,7 +2,11 @@ import { notFound } from 'next/navigation';
 import { Board } from '@/components/board/board';
 import { BoardFilterBar } from '@/components/board/filter-bar';
 import { EmptyState } from '@/components/empty-state';
-import { getBoardApplications, parseBoardFilters } from '@/lib/applications/queries';
+import {
+  getBoardApplications,
+  parseBoardFilters,
+  serialiseBoardFilters,
+} from '@/lib/applications/queries';
 import { createClient } from '@/lib/supabase/server';
 
 /**
@@ -69,12 +73,7 @@ export default async function TeamBoardPage({ params, searchParams }: PageProps<
     // its CONTENT's size, so without this the eight columns would widen the
     // page instead of scrolling inside the board.
     <main className="flex h-full min-h-0 min-w-0 flex-col gap-4 p-6">
-      <div>
-        {heading}
-        <p className="mt-2 text-base text-muted-foreground">
-          Applicants move left to right through review, interview, and decision.
-        </p>
-      </div>
+      {heading}
 
       <BoardFilterBar
         filters={filters}
@@ -100,6 +99,7 @@ export default async function TeamBoardPage({ params, searchParams }: PageProps<
         teamSlug={team.slug}
         now={new Date().toISOString()}
         subteams={subteams ?? []}
+        boardQuery={serialiseBoardFilters(filters).toString()}
       />
     </main>
   );

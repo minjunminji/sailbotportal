@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
+import { appendBoardQuery } from '@/lib/applications/navigation';
 import type { BoardCard as BoardCardData, BoardSubteam } from '@/lib/applications/queries';
 import { daysInColumn, daysInColumnLabel, shortYearLabel } from './columns';
 
@@ -27,12 +28,14 @@ import { daysInColumn, daysInColumnLabel, shortYearLabel } from './columns';
 export function BoardCard({
   card,
   teamSlug,
+  boardQuery,
   now,
   subteamsById,
   overlay = false,
 }: {
   card: BoardCardData;
   teamSlug: string;
+  boardQuery: string;
   /** One clock reading for the whole page. See `daysInColumn`. */
   now: string;
   /** Resolves `assignedSubteamId`, which arrives as a bare uuid. */
@@ -85,7 +88,7 @@ export function BoardCard({
           pointer sensor's 5px threshold is what keeps a plain click on it from
           being read as the start of a drag. */}
       <Link
-        href={`/admin/${teamSlug}/applications/${card.id}`}
+        href={appendBoardQuery(`/admin/${teamSlug}/applications/${card.id}`, boardQuery)}
         className="rounded-sm text-base font-medium hover:underline hover:underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         {card.applicantName}

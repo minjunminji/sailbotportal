@@ -9,6 +9,7 @@ import {
   type BoardCard,
   type BoardFilters,
 } from '../queries';
+import { getBoardApplicationNavigation } from '../navigation';
 
 /**
  * The board query layer, against a real database.
@@ -628,5 +629,32 @@ describe('ordering', () => {
       .map((card) => card.id);
     expect(tied).toHaveLength(2);
     expect(tied).toEqual([...tied].sort());
+  });
+});
+
+describe('detail navigation', () => {
+  it('uses the filtered board order for previous and next applicants', async () => {
+    const navigation = await getBoardApplicationNavigation(
+      softPostingId,
+      applications['Cara Diaz'],
+      withFilters({ firstChoiceSubteamId: subteams['test-board-path'] }),
+      softLead,
+    );
+
+    expect(navigation).toEqual({
+      previousId: applications['Ada Bell'],
+      nextId: applications['Evan Ford'],
+    });
+  });
+
+  it('cannot navigate through rows hidden by RLS', async () => {
+    const navigation = await getBoardApplicationNavigation(
+      mechPostingId,
+      applications['Mia Novak'],
+      EMPTY_BOARD_FILTERS,
+      softLead,
+    );
+
+    expect(navigation).toEqual({ previousId: null, nextId: null });
   });
 });

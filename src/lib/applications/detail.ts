@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/supabase/types';
 import { validateQuestion } from '@/lib/questions/validate';
 import type { AnswerMap, Question } from '@/lib/questions/types';
+import { getApplicationNotes, type ApplicationNote } from './notes';
 import type { ApplicationStatus, BoardSubteam } from './queries';
 
 /**
@@ -58,6 +59,7 @@ export type ApplicationDetail = {
   assignedSubteam: BoardSubteam | null;
   answers: AnswerMap;
   questions: SnapshotEntry[];
+  notes: ApplicationNote[];
   /**
    * The other teams this person applied to in the same submission.
    *
@@ -118,9 +120,10 @@ export async function getApplicationDetail(
     ...(row.ranked_subteams ?? []),
     ...(row.assigned_subteam_id ? [row.assigned_subteam_id] : []),
   ];
-  const [subteams, siblings] = await Promise.all([
+  const [subteams, siblings, notes] = await Promise.all([
     loadSubteams(supabase, subteamIds),
     loadSiblings(supabase, row.submission_id, row.id),
+    getApplicationNotes(row.id, supabase),
   ]);
 
   return {
@@ -148,6 +151,7 @@ export async function getApplicationDetail(
       : null,
     answers: (row.answers ?? {}) as AnswerMap,
     questions: readSnapshot(row.question_schema_snapshot),
+    notes,
     siblings,
   };
 }

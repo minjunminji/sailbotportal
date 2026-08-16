@@ -43,7 +43,15 @@ function card(overrides: Partial<BoardCard> = {}): BoardCard {
 }
 
 function renderBoard(cards: BoardCard[] = [card()]) {
-  return render(<Board cards={cards} teamSlug="soft" now={NOW} subteams={[PATH, NET, HULL]} />);
+  return render(
+    <Board
+      cards={cards}
+      teamSlug="soft"
+      now={NOW}
+      subteams={[PATH, NET, HULL]}
+      boardQuery="subteam=sub-path&from=2026-08-01&q=Ada+Bell"
+    />,
+  );
 }
 
 /** A column by its label, whether it is expanded or folded. */
@@ -158,7 +166,10 @@ describe('the card', () => {
     renderBoard([card({ noteCount: 3 })]);
 
     const link = screen.getByRole('link', { name: 'Ada Bell' });
-    expect(link).toHaveAttribute('href', '/admin/soft/applications/app-1');
+    expect(link).toHaveAttribute(
+      'href',
+      '/admin/soft/applications/app-1?subteam=sub-path&from=2026-08-01&q=Ada+Bell',
+    );
 
     const applied = column('Applied');
     expect(within(applied).getByText('2nd yr · CPEN')).toBeInTheDocument();
@@ -228,7 +239,10 @@ describe('the card', () => {
     renderBoard([card()]);
 
     const link = screen.getByRole('link', { name: 'Ada Bell' });
-    expect(link).toHaveAttribute('href', '/admin/soft/applications/app-1');
+    expect(link).toHaveAttribute(
+      'href',
+      '/admin/soft/applications/app-1?subteam=sub-path&from=2026-08-01&q=Ada+Bell',
+    );
     expect(document.querySelector('[data-card="app-1"]')).toContainElement(link);
   });
 

@@ -1,13 +1,15 @@
 import Link from 'next/link';
 import type { ApplicationDetail as Detail } from '@/lib/applications/detail';
+import type { ApplicationNavigation } from '@/lib/applications/navigation';
 import { BOARD_COLUMNS } from '@/components/board/columns';
 import { shortYearLabel } from '@/components/board/columns';
+import { NotesPanel } from '@/components/notes/notes-panel';
 import { AnswerView } from './answer-view';
 import { DetailPanes } from './detail-panes';
 import { ResumeViewer } from './resume-viewer';
 
 /**
- * The full-screen view of one application.
+ * The contents of one application's board-framed modal.
  *
  * EVERY QUESTION COMES FROM `detail.questions`, which is the frozen snapshot —
  * never the posting's current `question_schema`. See `getApplicationDetail`.
@@ -28,18 +30,28 @@ function statusLabel(status: string): string {
   return BOARD_COLUMNS.find((column) => column.status === status)?.label ?? status;
 }
 
-export function ApplicationDetailView({ detail }: { detail: Detail }) {
+export function ApplicationDetailView({
+  detail,
+  navigation = { previousHref: null, nextHref: null },
+}: {
+  detail: Detail;
+  navigation?: ApplicationNavigation;
+}) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6">
       <header className="flex flex-col gap-3">
-        {/* `pr-10` reserves the corner for the takeover's close button, which
-            is absolutely positioned there. Harmless on the full page, which has
-            no such button — a 40px inset on one row that nothing reaches. */}
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 pr-10">
+        {/* `pr-10` reserves the corner for the takeover's absolutely positioned
+            close button. */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pr-10">
           <h1 className="text-2xl font-semibold tracking-tight">{detail.applicantName}</h1>
           <span className="rounded-md border border-border px-2 py-0.5 text-sm">
             {statusLabel(detail.status)}
           </span>
+          <NotesPanel applicationId={detail.id} initialNotes={detail.notes} />
+          <nav aria-label="Applicant navigation" className="flex items-center gap-1">
+            <ApplicantArrow direction="previous" href={navigation.previousHref} />
+            <ApplicantArrow direction="next" href={navigation.nextHref} />
+          </nav>
         </div>
 
         <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
@@ -123,6 +135,53 @@ export function ApplicationDetailView({ detail }: { detail: Detail }) {
         }
       />
     </div>
+  );
+}
+
+function ApplicantArrow({
+  direction,
+  href,
+}: {
+  direction: 'previous' | 'next';
+  href: string | null;
+}) {
+  const label = direction === 'previous' ? 'Previous applicant' : 'Next applicant';
+  const icon = (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {direction === 'previous' ? <path d="m15 18-6-6 6-6" /> : <path d="m9 18 6-6-6-6" />}
+    </svg>
+  );
+  const classes =
+    'rounded-md border border-border p-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+
+  return href === null ? (
+    <button
+      type="button"
+      aria-label={label}
+      disabled
+      className={`${classes} cursor-not-allowed text-muted-foreground opacity-40`}
+    >
+      {icon}
+    </button>
+  ) : (
+    <Link
+      href={href}
+      replace
+      aria-label={label}
+      className={`${classes} text-muted-foreground hover:text-foreground`}
+    >
+      {icon}
+    </Link>
   );
 }
 

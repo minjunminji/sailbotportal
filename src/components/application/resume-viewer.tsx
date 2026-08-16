@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 // Type-only, so it is erased at build and does not drag pdf.js into any bundle
 // that merely mentions this component.
-import type { PDFDocumentLoadingTask } from 'pdfjs-dist';
+import type { PDFDocumentLoadingTask, PDFPageProxy, RenderTask } from 'pdfjs-dist';
 
 /**
  * The resume, rendered by the app rather than by the browser.
@@ -14,24 +14,34 @@ import type { PDFDocumentLoadingTask } from 'pdfjs-dist';
  * the pane into a grey download prompt; with the setting off it renders the
  * whole Chrome PDF application inside the pane, a second toolbar and thumbnail
  * rail competing with our own UI. Neither is detectable from script, so the app
- * could not even fall back. Rendering the pages ourselves is the only way the
- * pane looks the same for everybody — and the only way zoom can be ours.
+ * could not even fall back.
  *
- * ZOOMING RE-RASTERISES rather than scaling the canvas with a CSS transform.
- * A transform is instant and free, and it also means zooming in enlarges pixels
- * that were rendered for a smaller box, so the text goes soft exactly when
- * somebody is squinting at it. Re-rendering at the new scale is the reason to
- * have a real PDF engine here at all.
+ * ## How zoom stays instant
  *
- * THE PAGES ARE BUILT IMPERATIVELY. pdf.js draws into a canvas and positions a
- * text layer against it; both are DOM it owns. React manages the shell and gets
- * out of the way inside, which is why this reaches for refs rather than state
- * to hold the output.
+ * Rasterising a page takes tens of milliseconds at best, so a viewer that
+ * re-renders before it repaints feels broken however fast the render is. Every
+ * PDF viewer worth using therefore does two things per zoom step, and this does
+ * the same:
+ *
+ * 1. SCALE WHAT IS ALREADY ON SCREEN, with a CSS transform. That is a compositor
+ *    operation — it lands on the next frame, and it scales the canvas and the
+ *    text layer together so selection stays aligned with the glyphs.
+ * 2. RE-RASTERISE SHORTLY AFTER, once the zooming has stopped, and drop the
+ *    transform back to 1. Zooming in on a transform enlarges pixels drawn for a
+ *    smaller box, so this is what turns a soft page crisp again.
+ *
+ * The transform lives on an inner element while an outer one carries the
+ * display size, because a transform does not affect layout — without the pair,
+ * a zoomed page would paint over its neighbours and could not be scrolled to.
+ *
+ * The document is fetched and parsed ONCE. It used to be a dependency of the
+ * render effect alongside the zoom, so every step re-downloaded and re-parsed
+ * the file before drawing anything, which is where the lag came from.
  */
 
 type Status = 'loading' | 'ready' | 'error';
 
-/** Zoom stops, rather than a continuous scale: each one is a re-render. */
+/** Zoom stops, rather than a continuous scale. */
 const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3] as const;
 /** `1` is fit-to-width, which is where the viewer opens. */
 const FIT_INDEX = ZOOM_STEPS.indexOf(1);
@@ -39,14 +49,44 @@ const FIT_INDEX = ZOOM_STEPS.indexOf(1);
 /** Beyond this, more pixels stop being visible and start being memory. */
 const MAX_DEVICE_SCALE = 2;
 /**
- * A ceiling on total rasterisation, in multiples of the PDF's natural size.
- *
- * Without it, zoom 3 on a retina screen asks for a canvas six times the page in
- * each direction — roughly 78MB of bitmap per page, per render. Capping the
- * product means zooming in trades a little sharpness for not exhausting memory
- * on a laptop with twenty applications opened over an afternoon.
+ * A ceiling on rasterisation, in multiples of the page's natural size. Without
+ * it, 300% on a retina screen asks for a canvas six times the page in each
+ * direction — around 78MB of bitmap per page, per render.
  */
 const MAX_RASTER_SCALE = 4;
+/** Long enough to coalesce a burst of wheel or button steps into one render. */
+const RASTER_DELAY_MS = 180;
+
+type PageView = {
+  page: PDFPageProxy;
+  /** Carries the display size, so layout and scrolling follow the zoom. */
+  frame: HTMLDivElement;
+  /** Carries the transform, at the size it was actually rasterised. */
+  sheet: HTMLDivElement;
+  canvas: HTMLCanvasElement;
+  textLayer: HTMLDivElement;
+  /** Page dimensions at scale 1, in PDF units. */
+  base: { width: number; height: number };
+  /** The scale the canvas and text layer currently hold. */
+  renderedScale: number;
+  task?: RenderTask;
+};
+
+function createPageSheet() {
+  const sheet = window.document.createElement('div');
+  sheet.className = 'absolute top-0 left-0 origin-top-left bg-white shadow-sm';
+
+  const canvas = window.document.createElement('canvas');
+  canvas.style.display = 'block';
+  canvas.style.width = '100%';
+  canvas.style.height = '100%';
+
+  const textLayer = window.document.createElement('div');
+  textLayer.className = 'pdf-text-layer';
+
+  sheet.append(canvas, textLayer);
+  return { sheet, canvas, textLayer };
+}
 
 export function ResumeViewer({
   applicationId,
@@ -60,23 +100,41 @@ export function ResumeViewer({
   const src = `/api/resume/${applicationId}`;
   const scrollRef = useRef<HTMLDivElement>(null);
   const pagesRef = useRef<HTMLDivElement>(null);
+  const viewsRef = useRef<PageView[]>([]);
+  const rasterTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /** Bumped on every rasterise, so a superseded one can bail out. */
+  const rasterSeq = useRef(0);
+
   const [status, setStatus] = useState<Status>('loading');
   const [width, setWidth] = useState(0);
   const [zoomIndex, setZoomIndex] = useState(FIT_INDEX);
+  const [ready, setReady] = useState(0);
   const zoom = ZOOM_STEPS[zoomIndex];
 
-  // The pane's width sets the fit-to-width scale, so it has to be known before
-  // anything is drawn and re-read when the window changes. Measured on the
-  // scroll container's content box, so it stays the visible width even once
-  // zooming has made the content wider than it.
+  /**
+   * What a page should measure on screen right now.
+   *
+   * Takes the page's natural width rather than the `PageView` itself: a
+   * memoised function that receives the view and is then used as an effect
+   * dependency makes the compiler treat those views as frozen, and the effects
+   * below exist precisely to mutate their DOM.
+   */
+  const displayScale = useCallback(
+    (baseWidth: number) => (width === 0 ? 0 : (width / baseWidth) * zoom),
+    [width, zoom],
+  );
+
+  // The pane's width sets the fit-to-width scale. Measured on the scroll
+  // container's content box, so it stays the VISIBLE width even once zooming
+  // has made the content inside wider than it.
   useEffect(() => {
     const element = scrollRef.current;
     if (!element) return;
 
     const observer = new ResizeObserver(([entry]) => {
       const next = Math.floor(entry.contentRect.width);
-      // Ignored below a few pixels: re-rasterising every page for a one-pixel
-      // scrollbar change is expensive and invisible.
+      // Ignored below a few pixels: re-laying out every page for a one-pixel
+      // scrollbar change is churn nobody can see.
       setWidth((current) => (Math.abs(current - next) > 8 ? next : current));
     });
     observer.observe(element);
@@ -91,8 +149,8 @@ export function ResumeViewer({
   }, []);
 
   // Ctrl/Cmd + wheel, the gesture every document viewer has trained people to
-  // expect. Bound natively rather than through React's `onWheel` because the
-  // browser's own page zoom has to be prevented, and React attaches wheel
+  // expect. Bound natively rather than through React's `onWheel`, because the
+  // browser's own page zoom has to be prevented and React attaches wheel
   // listeners passively — where `preventDefault` does nothing.
   useEffect(() => {
     const element = scrollRef.current;
@@ -108,12 +166,11 @@ export function ResumeViewer({
     return () => element.removeEventListener('wheel', onWheel);
   }, [hasResume, stepZoom]);
 
+  // --- Load once -----------------------------------------------------------
   useEffect(() => {
-    if (!hasResume || width === 0) return;
+    if (!hasResume) return;
 
     let cancelled = false;
-    // The loading TASK, not the document: `destroy` lives here, and holding it
-    // means an unmount can abort a load still in flight.
     let task: PDFDocumentLoadingTask | undefined;
 
     (async () => {
@@ -124,10 +181,10 @@ export function ResumeViewer({
         // for why the usual `new URL(...)` trick fails silently at runtime.
         pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
-        // Fetched here rather than handed to pdf.js as a URL: this is one
-        // same-origin request that follows the route's redirect with the
-        // session cookie attached, instead of pdf.js issuing range requests
-        // against a redirected cross-origin signed URL.
+        // Fetched here rather than handed to pdf.js as a URL: one same-origin
+        // request that follows the route's redirect with the session cookie
+        // attached, instead of pdf.js issuing range requests against a
+        // redirected cross-origin signed URL.
         const response = await fetch(src);
         if (!response.ok) throw new Error(`resume request failed: ${response.status}`);
         const data = await response.arrayBuffer();
@@ -137,85 +194,146 @@ export function ResumeViewer({
         const doc = await task.promise;
         if (cancelled) return;
 
-        const container = pagesRef.current;
-        if (!container) return;
-
-        // Drawn into a fragment and swapped in at the end, so the pane never
-        // shows a half-rendered document while a zoom is being applied.
-        const rendered = window.document.createDocumentFragment();
+        const views: PageView[] = [];
+        const fragment = window.document.createDocumentFragment();
 
         for (let number = 1; number <= doc.numPages; number += 1) {
           const page = await doc.getPage(number);
           if (cancelled) return;
+          const base = page.getViewport({ scale: 1 });
 
-          const unscaled = page.getViewport({ scale: 1 });
-          const scale = (width / unscaled.width) * zoom;
-          const viewport = page.getViewport({ scale });
+          const frame = window.document.createElement('div');
+          frame.className = 'relative';
 
-          const deviceScale = Math.min(
-            window.devicePixelRatio || 1,
-            MAX_DEVICE_SCALE,
-            MAX_RASTER_SCALE / scale,
-          );
+          const { sheet, canvas, textLayer } = createPageSheet();
+          frame.append(sheet);
+          fragment.append(frame);
 
-          const sheet = window.document.createElement('div');
-          sheet.className = 'relative bg-white shadow-sm';
-          sheet.style.width = `${Math.floor(viewport.width)}px`;
-          sheet.style.height = `${Math.floor(viewport.height)}px`;
-
-          const canvas = window.document.createElement('canvas');
-          // Drawn at device resolution and displayed at CSS resolution, or the
-          // text is soft on every retina screen.
-          canvas.width = Math.floor(viewport.width * deviceScale);
-          canvas.height = Math.floor(viewport.height * deviceScale);
-          canvas.style.width = '100%';
-          canvas.style.height = '100%';
-          canvas.style.display = 'block';
-          sheet.append(canvas);
-
-          const textLayer = window.document.createElement('div');
-          textLayer.className = 'pdf-text-layer';
-          // pdf.js positions each run in units of this, so it must match the
-          // viewport the text layer was built against.
-          textLayer.style.setProperty('--scale-factor', String(scale));
-          sheet.append(textLayer);
-
-          rendered.append(sheet);
-
-          await page.render({
+          views.push({
+            page,
+            frame,
+            sheet,
             canvas,
-            viewport: page.getViewport({ scale: scale * deviceScale }),
-          }).promise;
-          if (cancelled) return;
-
-          // A real text layer, so a lead can select and copy from the resume
-          // and the browser's own find-in-page still works — the thing a
-          // canvas-only render would quietly take away.
-          const text = new pdfjs.TextLayer({
-            textContentSource: await page.getTextContent(),
-            container: textLayer,
-            viewport,
+            textLayer,
+            base: { width: base.width, height: base.height },
+            // Nothing drawn yet; the first rasterise sets this properly.
+            renderedScale: 0,
           });
-          await text.render();
         }
 
         if (cancelled) return;
-        container.replaceChildren(rendered);
+        pagesRef.current?.replaceChildren(fragment);
+        viewsRef.current = views;
         setStatus('ready');
+        setReady((value) => value + 1);
       } catch (error) {
         if (cancelled) return;
-        console.error('[resume] render failed', error);
+        console.error('[resume] load failed', error);
         setStatus('error');
       }
     })();
 
     return () => {
       cancelled = true;
+      for (const view of viewsRef.current) view.task?.cancel();
+      viewsRef.current = [];
       // Releases the worker and the page bitmaps. Without it, opening twenty
       // applications in a sitting keeps twenty documents alive.
       void task?.destroy();
     };
-  }, [src, width, zoom, hasResume]);
+  }, [src, hasResume]);
+
+  // --- Resize the pages now, sharpen them shortly after ---------------------
+  /* eslint-disable react-hooks/immutability -- pdf.js owns this imperative DOM subtree; React only owns its shell. */
+  useEffect(() => {
+    if (width === 0 || viewsRef.current.length === 0) return;
+
+    // Invalidate and stop work for the previous zoom immediately. Waiting
+    // until this zoom's debounce expires would let an obsolete render finish
+    // and briefly replace the page with the wrong scale.
+    const sequence = (rasterSeq.current += 1);
+    for (const view of viewsRef.current) {
+      view.task?.cancel();
+    }
+
+    // 1. Immediate: every page takes its new size, and the already-drawn
+    //    bitmap is stretched to fit it. One compositor frame, no decoding.
+    for (const view of viewsRef.current) {
+      const scale = displayScale(view.base.width);
+      view.frame.style.width = `${Math.round(view.base.width * scale)}px`;
+      view.frame.style.height = `${Math.round(view.base.height * scale)}px`;
+
+      if (view.renderedScale > 0) {
+        const ratio = scale / view.renderedScale;
+        view.sheet.style.transform = ratio === 1 ? '' : `scale(${ratio})`;
+      }
+    }
+
+    // 2. Deferred: redraw at the new scale so the pixels match the size.
+    clearTimeout(rasterTimer.current);
+    rasterTimer.current = setTimeout(() => {
+      void (async () => {
+        for (const view of viewsRef.current) {
+          if (sequence !== rasterSeq.current) return;
+          const scale = displayScale(view.base.width);
+          if (scale === 0 || scale === view.renderedScale) continue;
+
+          const pdfjs = await import('pdfjs-dist');
+          const viewport = view.page.getViewport({ scale });
+          const deviceScale = Math.min(
+            window.devicePixelRatio || 1,
+            MAX_DEVICE_SCALE,
+            MAX_RASTER_SCALE / scale,
+          );
+
+          // Double-buffer the page. Resizing a canvas clears it synchronously,
+          // so rendering into the visible one produces a white flash. Keep the
+          // CSS-scaled old sheet on screen while this detached replacement is
+          // rasterised and its text layer is built.
+          const next = createPageSheet();
+          next.sheet.style.width = `${Math.round(viewport.width)}px`;
+          next.sheet.style.height = `${Math.round(viewport.height)}px`;
+          next.canvas.width = Math.floor(viewport.width * deviceScale);
+          next.canvas.height = Math.floor(viewport.height * deviceScale);
+
+          try {
+            view.task = view.page.render({
+              canvas: next.canvas,
+              viewport: view.page.getViewport({ scale: scale * deviceScale }),
+            });
+            await view.task.promise;
+          } catch {
+            // A cancelled render throws; that is the mechanism working.
+            continue;
+          }
+          if (sequence !== rasterSeq.current) return;
+
+          // Rebuilt at the new scale rather than rescaled, so the invisible
+          // text sits exactly on the glyphs it belongs to.
+          next.textLayer.style.setProperty('--scale-factor', String(scale));
+          const text = new pdfjs.TextLayer({
+            textContentSource: await view.page.getTextContent(),
+            container: next.textLayer,
+            viewport,
+          });
+          await text.render();
+          if (sequence !== rasterSeq.current) return;
+
+          // One DOM mutation installs the complete sharp page. The old raster
+          // remains visible until this point, so there is no blank frame.
+          view.frame.replaceChildren(next.sheet);
+          view.sheet = next.sheet;
+          view.canvas = next.canvas;
+          view.textLayer = next.textLayer;
+          view.renderedScale = scale;
+          view.task = undefined;
+        }
+      })();
+    }, RASTER_DELAY_MS);
+
+    return () => clearTimeout(rasterTimer.current);
+  }, [width, zoom, ready, displayScale]);
+  /* eslint-enable react-hooks/immutability */
 
   if (!hasResume) {
     return (
@@ -233,7 +351,7 @@ export function ResumeViewer({
     'focus-visible:ring-offset-background disabled:opacity-40 disabled:hover:text-muted-foreground';
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2">
+    <div className="flex h-full min-h-0 w-full flex-col gap-2">
       <div className="flex items-center gap-1">
         <button
           type="button"
@@ -297,8 +415,7 @@ export function ResumeViewer({
         {/* `w-max` with `min-w-full`, not just `items-center`. Centring alone
             makes content wider than the container overflow past its left edge,
             where scrolling cannot reach it. Sizing this to the widest page and
-            at least the container keeps the whole page scrollable at any
-            zoom. */}
+            at least the container keeps the whole page reachable at any zoom. */}
         <div ref={pagesRef} className="flex w-max min-w-full flex-col items-center gap-3" />
       </div>
     </div>

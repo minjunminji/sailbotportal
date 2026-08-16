@@ -78,9 +78,16 @@ export function DetailPanes({ answers, resume }: { answers: ReactNode; resume: R
           role="tabpanel"
           id={ids.resumePanel}
           aria-labelledby={ids.resumeTab}
+          // `flex-col`, not a row: a single child in a row-direction flex
+          // container sizes to its own content and leaves the rest of the pane
+          // empty, which is exactly what the resume did. A column stretches it
+          // across the full width instead.
+          //
           // `min-h-0` so the viewer inside can own its own scrolling rather
           // than stretching this panel to the height of a zoomed-in page.
-          className={`flex min-h-0 min-w-0 flex-1 ${tab === 'resume' ? '' : 'hidden'} lg:flex`}
+          className={`flex min-h-0 min-w-0 flex-1 flex-col ${
+            tab === 'resume' ? '' : 'hidden'
+          } lg:flex`}
         >
           {resume}
         </div>

@@ -1,5 +1,12 @@
 import { createClient } from '@/lib/supabase/server';
 import { getApplicationDetail, type ApplicationDetail } from './detail';
+import {
+  appendBoardQuery,
+  getBoardApplicationNavigation,
+  navigationHrefs,
+  type ApplicationNavigation,
+} from './navigation';
+import { parseBoardFilters, serialiseBoardFilters, type SearchParamsInput } from './queries';
 
 /**
  * The load both the real application page and its intercepting twin perform.
@@ -14,7 +21,13 @@ import { getApplicationDetail, type ApplicationDetail } from './detail';
 export async function loadApplicationForTeam(
   teamSlug: string,
   applicationId: string,
-): Promise<{ team: { id: string; name: string; slug: string }; detail: ApplicationDetail } | null> {
+  searchParams: SearchParamsInput,
+): Promise<{
+  team: { id: string; name: string; slug: string };
+  detail: ApplicationDetail;
+  boardHref: string;
+  navigation: ApplicationNavigation;
+} | null> {
   const supabase = await createClient();
 
   const { data: team } = await supabase
@@ -35,5 +48,19 @@ export async function loadApplicationForTeam(
   // the Software board's frame.
   if (detail.teamSlug !== team.slug) return null;
 
-  return { team, detail };
+  const filters = parseBoardFilters(searchParams);
+  const boardQuery = serialiseBoardFilters(filters).toString();
+  const neighbours = await getBoardApplicationNavigation(
+    detail.postingId,
+    detail.id,
+    filters,
+    supabase,
+  );
+
+  return {
+    team,
+    detail,
+    boardHref: appendBoardQuery(`/admin/${team.slug}`, boardQuery),
+    navigation: navigationHrefs(team.slug, neighbours, boardQuery),
+  };
 }

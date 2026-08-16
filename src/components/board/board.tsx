@@ -43,12 +43,15 @@ export function Board({
   teamSlug,
   now,
   subteams,
+  boardQuery,
 }: {
   cards: BoardCardData[];
   teamSlug: string;
   now: string;
   /** Every subteam on this team, for resolving assignments to a name. */
   subteams: BoardSubteam[];
+  /** Canonical filters to preserve while entering an application. */
+  boardQuery: string;
 }) {
   const [collapsed, setCollapsed] = useState<Set<ApplicationStatus>>(
     // Lazy, or every render would build a Set and throw it away.
@@ -202,6 +205,7 @@ export function Board({
                 label={column.label}
                 cards={grouped[column.status]}
                 teamSlug={teamSlug}
+                boardQuery={boardQuery}
                 now={now}
                 subteamsById={subteamsById}
                 collapsed={collapsed.has(column.status)}
@@ -225,6 +229,7 @@ export function Board({
               <BoardCard
                 card={activeCard}
                 teamSlug={teamSlug}
+                boardQuery={boardQuery}
                 now={now}
                 subteamsById={subteamsById}
                 overlay

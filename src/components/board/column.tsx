@@ -31,6 +31,7 @@ export function BoardColumn({
   label,
   cards,
   teamSlug,
+  boardQuery,
   now,
   subteamsById,
   collapsed,
@@ -40,6 +41,7 @@ export function BoardColumn({
   label: string;
   cards: BoardCardData[];
   teamSlug: string;
+  boardQuery: string;
   now: string;
   subteamsById: Map<string, BoardSubteam>;
   collapsed: boolean;
@@ -181,6 +183,7 @@ export function BoardColumn({
               key={card.id}
               card={card}
               teamSlug={teamSlug}
+              boardQuery={boardQuery}
               now={now}
               subteamsById={subteamsById}
             />

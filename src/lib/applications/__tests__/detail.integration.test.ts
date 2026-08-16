@@ -305,6 +305,28 @@ describe('the header facts', () => {
     const detail = await getApplicationDetail(applicationId, softLead);
     expect(detail!.rankedSubteams.map((s) => s.code)).toEqual(['NET', 'PATH']);
   });
+
+  it('includes attributed notes for the detail header panel', async () => {
+    const authorId = (await softLead.auth.getUser()).data.user!.id;
+    const { error } = await admin.from('application_notes').insert({
+      application_id: applicationId,
+      author_id: authorId,
+      body: 'Detail panel note',
+      created_at: '2026-08-16T12:00:00.000Z',
+    });
+    if (error) throw error;
+
+    const detail = await getApplicationDetail(applicationId, softLead);
+
+    expect(detail!.notes).toEqual([
+      expect.objectContaining({
+        applicationId,
+        body: 'Detail panel note',
+        createdAt: '2026-08-16T12:00:00.000Z',
+      }),
+    ]);
+    expect(detail!.notes[0].authorName).not.toBe('');
+  });
 });
 
 describe('the other applications from one submission', () => {
