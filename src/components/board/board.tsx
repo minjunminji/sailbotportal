@@ -22,7 +22,7 @@ import { BOARD_COLUMNS, DEFAULT_COLLAPSED, groupByStatus } from './columns';
 import { BoardColumn } from './column';
 import { BoardCard } from './card';
 import { boardCollisionDetection, boardCoordinateGetter } from './keyboard';
-import { resolveMove } from './moves';
+import { applyOptimisticMove, resolveMove } from './moves';
 
 /**
  * The board itself: eight columns side by side, scrolling horizontally.
@@ -59,14 +59,8 @@ export function Board({
 
   const [optimisticCards, applyMove] = useOptimistic(
     cards,
-    (state: BoardCardData[], move: { id: string; status: ApplicationStatus }) =>
-      state.map((card) =>
-        card.id === move.id
-          ? // `statusChangedAt` is reset too, or the card would land in its new
-            // column still claiming the eleven days it spent in the old one.
-            { ...card, status: move.status, statusChangedAt: now }
-          : card,
-      ),
+    (state: BoardCardData[], move: { id: string; status: ApplicationStatus; movedAt: string }) =>
+      applyOptimisticMove(state, move, move.movedAt),
   );
 
   const grouped = useMemo(() => groupByStatus(optimisticCards), [optimisticCards]);
@@ -115,7 +109,9 @@ export function Board({
     setError(null);
 
     startTransition(async () => {
-      applyMove(move);
+      // Read once, here, so the reducer stays pure and every re-run of it
+      // places the card identically.
+      applyMove({ ...move, movedAt: new Date().toISOString() });
       const result = await moveApplication(move.id, move.status, teamSlug);
       // On failure nothing is revalidated, so the `cards` prop never changes
       // and the optimistic value falls back to it when the transition ends —

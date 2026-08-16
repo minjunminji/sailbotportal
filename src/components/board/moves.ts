@@ -37,3 +37,59 @@ export function resolveMove(
 
   return { id: activeId, status };
 }
+
+/**
+ * The board's row order, matching the query exactly.
+ *
+ * `getBoardApplications` orders by `status_changed_at` then `id`, so this has
+ * to as well — see below for what happens when the two disagree.
+ *
+ * Compared as instants rather than as strings: Postgres hands back
+ * `2026-08-16T12:00:00.123456+00:00` while `toISOString()` produces
+ * `2026-08-16T12:00:00.123Z`, and those two formats do not sort correctly
+ * against each other character by character.
+ */
+function compareCards(a: BoardCard, b: BoardCard): number {
+  const left = Date.parse(a.statusChangedAt);
+  const right = Date.parse(b.statusChangedAt);
+  if (left !== right) return left - right;
+  // The same tie-break the query uses. An ordering with ties is not an
+  // ordering: without this, tied cards could sit differently here than they
+  // will when the server's rows arrive.
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+/**
+ * The board as it looks the instant a card is dropped.
+ *
+ * THIS RESORTS, and that is the whole point. Simply changing the card's status
+ * left it at whatever index it already held, so it landed wherever it happened
+ * to sit among the cards already in the target column. A moment later the
+ * server's rows arrived, correctly ordered, and the card jumped again — one
+ * drop, two different positions, the second one unexplained.
+ *
+ * Sorting here by the same rule the query uses means the optimistic board is
+ * already the board the server is about to send, so revalidation changes
+ * nothing visible.
+ *
+ * `movedAt` is passed in rather than read from the clock here so this stays a
+ * pure function of its arguments — React may run an optimistic reducer more
+ * than once, and a reducer that reads the time is a reducer that can produce
+ * two different answers for one action.
+ */
+export function applyOptimisticMove(
+  cards: BoardCard[],
+  move: { id: string; status: ApplicationStatus },
+  movedAt: string,
+): BoardCard[] {
+  return cards
+    .map((card) =>
+      card.id === move.id
+        ? // `statusChangedAt` moves too, or the card would land in its new
+          // column still claiming the eleven days it spent in the old one —
+          // and would sort as though it had never been touched.
+          { ...card, status: move.status, statusChangedAt: movedAt }
+        : card,
+    )
+    .sort(compareCards);
+}
