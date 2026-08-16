@@ -32,7 +32,10 @@ export function ApplicationDetailView({ detail }: { detail: Detail }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6">
       <header className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        {/* `pr-10` reserves the corner for the takeover's close button, which
+            is absolutely positioned there. Harmless on the full page, which has
+            no such button — a 40px inset on one row that nothing reaches. */}
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 pr-10">
           <h1 className="text-2xl font-semibold tracking-tight">{detail.applicantName}</h1>
           <span className="rounded-md border border-border px-2 py-0.5 text-sm">
             {statusLabel(detail.status)}

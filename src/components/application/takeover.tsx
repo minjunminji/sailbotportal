@@ -17,9 +17,13 @@ import { useEffect, useRef, type ReactNode } from 'react';
  * URL in place while removing the view would leave the two disagreeing, and the
  * back button would then appear to do nothing.
  *
- * It covers the viewport rather than floating over it. Reading an application
- * is the task, not a glance at one — the board behind would only be something
- * to lose the cursor in.
+ * SIZED, NOT FULLSCREEN. It was edge to edge, and that read as a navigation
+ * rather than an overlay — the board vanished, so nothing on screen said the
+ * view was temporary or which column the applicant sat in. Leaving the board
+ * visible and dimmed says both. The width is still generous because this is not
+ * a peek: the answers and the resume sit side by side, and a PDF needs around
+ * 500px before it stops being a thumbnail, so the two panes together set the
+ * floor rather than the amount of text does.
  */
 export function Takeover({ label, children }: { label: string; children: ReactNode }) {
   const router = useRouter();
@@ -34,26 +38,46 @@ export function Takeover({ label, children }: { label: string; children: ReactNo
     <dialog
       ref={ref}
       aria-label={label}
-      // Fires for Escape and for `close()` alike, so both routes out lead to
+      // Fires for Escape and for `close()` alike, so every route out leads to
       // the same place.
       onClose={() => router.back()}
-      // FILLS THE VIEWPORT. `fixed inset-0` rather than a width and a height,
-      // and `m-0 max-w-none max-h-none` to beat the user-agent's own sizing —
-      // a modal dialog is centred by `margin: auto`, which Tailwind's preflight
-      // resets to `0`, so without this it sits in the top-left corner at
-      // whatever size it was given.
-      //
-      // There is no backdrop left to click, so closing is Escape or the button.
-      className="fixed inset-0 m-0 h-auto max-h-none w-auto max-w-none border-0 bg-background p-0 text-foreground"
+      onClick={(event) => {
+        // A click on the backdrop reports the dialog itself as its target;
+        // anything inside reports that child. The inner element below covers
+        // the dialog's whole content box, so this can only be the backdrop.
+        if (event.target === ref.current) ref.current?.close();
+      }}
+      // `m-auto` against `inset-0` is what centres it. A modal dialog is
+      // normally centred by the user agent's own `margin: auto`, which
+      // Tailwind's preflight resets to 0 — without this it sits in the
+      // top-left corner. `max-h-none` overrides the user agent's default cap
+      // for the same reason.
+      className="fixed inset-0 m-auto h-[88vh] max-h-none w-[92vw] max-w-[1100px] rounded-lg border border-border bg-background p-0 text-foreground shadow-lg backdrop:bg-black/50"
     >
-      <div className="flex h-full min-h-0 flex-col gap-4 p-6">
+      {/* Padding lives here rather than on the dialog, so a click landing just
+          inside the edge still counts as content and not as "outside". */}
+      <div className="relative flex h-full min-h-0 flex-col p-6">
         <button
           type="button"
           onClick={() => ref.current?.close()}
-          className="self-start rounded-md text-sm text-muted-foreground underline underline-offset-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          aria-label="Close application"
+          className="absolute top-4 right-4 rounded-md p-1.5 text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          Close
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
         </button>
+
         {children}
       </div>
     </dialog>
