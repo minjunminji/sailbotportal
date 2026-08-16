@@ -131,28 +131,40 @@ export function BoardColumn({
       className={`flex w-72 shrink-0 flex-col rounded-lg ${isOver ? 'bg-accent' : ''}`}
     >
       {/* Sticky to the board's scroller, so the column you are scrolling
-          through keeps saying which column it is. `bg-background` because a
-          transparent header would let cards slide visibly underneath it, and
-          `z-10` to sit above them rather than have them draw over it.
+          through keeps saying which column it is. Opaque, or cards would slide
+          visibly underneath it, and `z-10` to sit above them.
 
           No bottom rule. The gap between the header and the first card already
           separates them, and a line here reads as the top edge of a second box
-          inside the column. */}
-      <div
-        className={`sticky top-0 z-10 flex items-center gap-2 rounded-t-lg border-x border-t px-3 py-2 ${edge} ${headerSurface}`}
-      >
-        <h2 className="text-sm font-medium">{label}</h2>
-        <span className="text-sm text-muted-foreground">{count}</span>
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={true}
-          className="ml-auto rounded-md p-1 text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          inside the column.
+
+          TWO BOXES, and the outer one is not decoration.
+          The card area is full height, so once the header is pinned the card
+          area's top has scrolled well above it and its left and right borders
+          run up behind the header. The header's own background stops at its
+          rounded corners, so those borders showed through the corner notches as
+          two short stubs above the frame. This outer box is square and opaque:
+          it covers that band edge to edge, and the rounded, bordered box below
+          draws on top of it. */}
+      <div className={`sticky top-0 z-10 ${headerSurface}`}>
+        <div
+          className={`flex items-center gap-2 rounded-t-lg border-x border-t px-3 py-2 ${edge} ${
+            isOver ? 'bg-accent' : ''
+          }`}
         >
-          <FoldIcon />
-          {/* The button is now wordless, so its whole name lives here. */}
-          <span className="sr-only">Collapse {label} column</span>
-        </button>
+          <h2 className="text-sm font-medium">{label}</h2>
+          <span className="text-sm text-muted-foreground">{count}</span>
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={true}
+            className="ml-auto rounded-md p-1 text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            <FoldIcon />
+            {/* The button is now wordless, so its whole name lives here. */}
+            <span className="sr-only">Collapse {label} column</span>
+          </button>
+        </div>
       </div>
 
       {/* `flex-1` so an empty column still fills its full height and stays a
