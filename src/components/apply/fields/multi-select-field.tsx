@@ -2,7 +2,7 @@
 
 import type { MultiSelectQuestion } from '@/lib/questions/types';
 import { asStringList } from '../answers';
-import { QuestionShell, describedBy } from '../question-shell';
+import { QuestionShell } from '../question-shell';
 import type { FieldProps } from './field-props';
 
 /**
@@ -35,16 +35,19 @@ export function MultiSelectField({
   }
 
   return (
-    <QuestionShell question={question} fieldId={fieldId} error={error} group>
+    <QuestionShell
+      question={question}
+      fieldId={fieldId}
+      error={error}
+      group
+      extraDescribedBy={capId}
+    >
       {max !== undefined ? (
         <p id={capId} className="mb-3 text-sm text-muted-foreground">
           Choose up to {max}. {selected.length} chosen.
         </p>
       ) : null}
-      <div
-        className="flex flex-col gap-2"
-        aria-describedby={describedBy(fieldId, question, error, capId)}
-      >
+      <div className="flex flex-col gap-2">
         {options.map((option, index) => {
           const optionId = `${fieldId}-option-${index}`;
           const checked = selected.includes(option);

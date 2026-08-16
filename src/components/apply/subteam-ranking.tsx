@@ -34,7 +34,14 @@ export function SubteamRanking({
   const errorId = `${fieldId}-error`;
 
   return (
-    <fieldset id={fieldId} className="border-0 p-0">
+    <fieldset
+      id={fieldId}
+      className="border-0 p-0"
+      // On the group, not on a wrapper `div`: `aria-describedby` is honoured
+      // where there is a role to describe, and `fieldset` carries one.
+      aria-describedby={error ? errorId : undefined}
+      aria-invalid={error ? true : undefined}
+    >
       <legend className="text-base font-medium">
         Which {posting.teamName} subteams are you most interested in?
       </legend>
@@ -51,7 +58,6 @@ export function SubteamRanking({
           selected={selected}
           maxChoices={posting.ranking.maxChoices}
           disabled={disabled}
-          describedById={error ? errorId : undefined}
           onChange={onChange}
         />
       </div>

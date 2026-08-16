@@ -57,18 +57,22 @@ export function TeamSection({
         </div>
       ) : null}
 
-      <fieldset id={gateId} className="mt-6 border-0 p-0">
+      <fieldset
+        id={gateId}
+        className="mt-6 border-0 p-0"
+        // On the group itself: `aria-describedby` needs a role to attach to,
+        // and the team's description is the thing being decided about.
+        aria-describedby={
+          [posting.description ? descriptionId : null, error ? errorId : null]
+            .filter(Boolean)
+            .join(' ') || undefined
+        }
+        aria-invalid={error ? true : undefined}
+      >
         <legend className="text-base font-medium">
           Do you want to apply to the {posting.teamName} team?
         </legend>
-        <div
-          className="mt-3 flex gap-6"
-          aria-describedby={
-            [posting.description ? descriptionId : null, error ? errorId : null]
-              .filter(Boolean)
-              .join(' ') || undefined
-          }
-        >
+        <div className="mt-3 flex gap-6">
           <div className="flex items-center gap-2">
             <input
               id={yesId}

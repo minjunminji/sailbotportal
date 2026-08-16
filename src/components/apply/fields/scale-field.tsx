@@ -2,7 +2,7 @@
 
 import type { ScaleQuestion } from '@/lib/questions/types';
 import { asNumber } from '../answers';
-import { QuestionShell, describedBy } from '../question-shell';
+import { QuestionShell } from '../question-shell';
 import type { FieldProps } from './field-props';
 
 /**
@@ -27,7 +27,13 @@ export function ScaleField({
   const endsId = minLabel || maxLabel ? `${fieldId}-ends` : undefined;
 
   return (
-    <QuestionShell question={question} fieldId={fieldId} error={error} group>
+    <QuestionShell
+      question={question}
+      fieldId={fieldId}
+      error={error}
+      group
+      extraDescribedBy={endsId}
+    >
       {endsId ? (
         <p id={endsId} className="mb-3 text-sm text-muted-foreground">
           {minLabel ? `${min} = ${minLabel}` : null}
@@ -35,10 +41,7 @@ export function ScaleField({
           {maxLabel ? `${max} = ${maxLabel}` : null}
         </p>
       ) : null}
-      <div
-        className="flex flex-wrap gap-4"
-        aria-describedby={describedBy(fieldId, question, error, endsId)}
-      >
+      <div className="flex flex-wrap gap-4">
         {points.map((point) => {
           const pointId = `${fieldId}-point-${point}`;
           return (

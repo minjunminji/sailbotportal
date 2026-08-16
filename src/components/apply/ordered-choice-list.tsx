@@ -69,7 +69,6 @@ export function OrderedChoiceList({
   onChange,
   idPrefix,
   disabled,
-  describedById,
   itemNoun,
 }: {
   choices: Choice[];
@@ -79,7 +78,6 @@ export function OrderedChoiceList({
   /** Namespaces the generated ids; must be unique on the page. */
   idPrefix: string;
   disabled?: boolean;
-  describedById?: string;
   /** What one entry is called, for button text and announcements. */
   itemNoun: string;
 }) {
@@ -88,7 +86,7 @@ export function OrderedChoiceList({
   const statusId = `${idPrefix}-status`;
 
   return (
-    <div aria-describedby={describedById}>
+    <div>
       <p className="text-sm text-muted-foreground">
         Choose up to {maxChoices}, most preferred first.
       </p>

@@ -59,6 +59,7 @@ export function QuestionShell({
   fieldId,
   error,
   group = false,
+  extraDescribedBy,
   children,
 }: {
   question: Question;
@@ -66,6 +67,13 @@ export function QuestionShell({
   error?: string;
   /** True when several controls answer one question. */
   group?: boolean;
+  /**
+   * Id of a further description — an option cap, the ends of a scale. Group
+   * questions pass it here rather than putting `aria-describedby` on a wrapper
+   * `div`, where it describes nothing: the attribute is only honoured on an
+   * element with a role, and the `fieldset`'s group role is that element.
+   */
+  extraDescribedBy?: string;
   children: ReactNode;
 }) {
   const label = (
@@ -89,7 +97,12 @@ export function QuestionShell({
 
   if (group) {
     return (
-      <fieldset id={fieldId} className="border-0 p-0">
+      <fieldset
+        id={fieldId}
+        className="border-0 p-0"
+        aria-describedby={describedBy(fieldId, question, error, extraDescribedBy)}
+        aria-invalid={error ? true : undefined}
+      >
         <legend className="text-base font-medium">{label}</legend>
         {help}
         <div className="mt-3">{children}</div>

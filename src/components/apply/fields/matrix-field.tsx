@@ -2,7 +2,7 @@
 
 import type { MatrixAnswer, MatrixQuestion } from '@/lib/questions/types';
 import { asMatrixAnswer } from '../answers';
-import { QuestionShell, describedBy, smallButtonClasses } from '../question-shell';
+import { QuestionShell, smallButtonClasses } from '../question-shell';
 import type { FieldProps } from './field-props';
 
 /**
@@ -57,7 +57,7 @@ export function MatrixField({
 
   return (
     <QuestionShell question={question} fieldId={fieldId} error={error} group>
-      <div className="overflow-x-auto" aria-describedby={describedBy(fieldId, question, error)}>
+      <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left">
           <thead>
             <tr>

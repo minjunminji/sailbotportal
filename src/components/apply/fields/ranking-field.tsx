@@ -3,7 +3,7 @@
 import type { RankingQuestion } from '@/lib/questions/types';
 import { asStringList } from '../answers';
 import { OrderedChoiceList } from '../ordered-choice-list';
-import { QuestionShell, describedBy } from '../question-shell';
+import { QuestionShell } from '../question-shell';
 import type { FieldProps } from './field-props';
 
 /**
@@ -33,7 +33,6 @@ export function RankingField({
         selected={selected}
         maxChoices={maxChoices}
         disabled={disabled}
-        describedById={describedBy(fieldId, question, error)}
         onChange={(next) => onChange(next)}
       />
     </QuestionShell>

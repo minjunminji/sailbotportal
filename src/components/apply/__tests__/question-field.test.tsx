@@ -171,3 +171,39 @@ describe('required questions', () => {
     expect(screen.getByText('(optional)')).toBeInTheDocument();
   });
 });
+
+describe('descriptions', () => {
+  it('attaches help text to a single control', () => {
+    setup({ ...byId.get('long_text')!, help: 'Two to five sentences.' });
+    expect(screen.getByLabelText(/Tell us about a project/)).toHaveAccessibleDescription(
+      /Two to five sentences/,
+    );
+  });
+
+  it('attaches help text to the group, not to a wrapper with no role', () => {
+    // `aria-describedby` on a bare `div` describes nothing. Several controls
+    // answering one question are wrapped in a `fieldset`, and the description
+    // belongs on that.
+    setup({ ...byId.get('scale')!, help: 'Be honest.' });
+    expect(screen.getByRole('group', { name: /How confident/ })).toHaveAccessibleDescription(
+      /Be honest/,
+    );
+  });
+
+  it('attaches an error to the group as well as showing it', () => {
+    const question = byId.get('multi_select')!;
+    render(
+      <QuestionField
+        question={question}
+        fieldId={`q-${question.id}`}
+        value={undefined}
+        onChange={jest.fn()}
+        error="Choose at least one option"
+        uploadPostingSlug="soft-2026"
+      />,
+    );
+    expect(screen.getByRole('group', { name: /Which languages/ })).toHaveAccessibleDescription(
+      /Choose at least one option/,
+    );
+  });
+});
