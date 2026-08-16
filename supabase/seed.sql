@@ -143,10 +143,17 @@ where p.email = f.email;
 -- ---------------------------------------------------------------------------
 -- The applications
 -- ---------------------------------------------------------------------------
--- `resume_path` stays NULL. A path here would name an object that does not
--- exist in the local `resumes` bucket, and a signed URL onto nothing is harder
--- to debug than an obviously absent resume. Uploading a real PDF through the
--- form is the way to exercise the viewer locally.
+-- `resume_path` stays NULL here. A path written by this file would name an
+-- object that does not exist in the local `resumes` bucket — SQL cannot put
+-- bytes in a bucket — and a signed URL onto nothing is harder to debug than an
+-- obviously absent resume.
+--
+-- Run `npm run db:seed-storage` after a reset to attach a real one. That script
+-- uploads the committed sample PDF and sets `resume_path` in the same pass, so
+-- the path and the object cannot disagree. It gives a resume to Jane Chen
+-- (soft), Rachel Kim (mech) and Priya Raman (elec); if those names change
+-- below, change them there too — the script fails loudly rather than silently
+-- attaching nothing.
 with fixture (
   posting_slug, sub_no, name, email, year, dept, status,
   submitted_days, status_days, ranked_slugs, assigned_slug, interview_days

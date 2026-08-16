@@ -11,6 +11,7 @@
     "test:integration": "jest --testMatch \"**/*.integration.test.ts\"",
     "test:watch": "jest --watch",
     "db:types": "supabase gen types typescript --local > src/lib/supabase/types.ts",
+    "db:seed-storage": "node scripts/seed-storage.mjs",
     "prepare": "husky",
     "typecheck": "next typegen && tsc --noEmit",
     "verify": "npm run typecheck && npm run lint && npm test"
