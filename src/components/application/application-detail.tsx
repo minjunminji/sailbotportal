@@ -4,6 +4,7 @@ import { BOARD_COLUMNS } from '@/components/board/columns';
 import { shortYearLabel } from '@/components/board/columns';
 import { AnswerView } from './answer-view';
 import { DetailPanes } from './detail-panes';
+import { ResumeViewer } from './resume-viewer';
 
 /**
  * The full-screen view of one application.
@@ -110,7 +111,13 @@ export function ApplicationDetailView({ detail }: { detail: Detail }) {
 
       <DetailPanes
         answers={<Answers detail={detail} />}
-        resume={<ResumePlaceholder present={detail.resumePath !== null} />}
+        resume={
+          <ResumeViewer
+            applicationId={detail.id}
+            applicantName={detail.applicantName}
+            hasResume={detail.resumePath !== null}
+          />
+        }
       />
     </div>
   );
@@ -150,18 +157,5 @@ function Answers({ detail }: { detail: Detail }) {
         ),
       )}
     </dl>
-  );
-}
-
-/** Task 7 replaces this with the signed-URL viewer. */
-function ResumePlaceholder({ present }: { present: boolean }) {
-  return (
-    <div className="rounded-lg border border-dashed border-border p-6 text-center">
-      <p className="text-sm text-muted-foreground">
-        {present
-          ? 'A resume was uploaded with this application. The viewer is not built yet.'
-          : 'No resume was uploaded with this application.'}
-      </p>
-    </div>
   );
 }
