@@ -1,6 +1,14 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { BoardCard, BoardSubteam } from '@/lib/applications/queries';
+
+// The action reaches for `next/headers` and a real database. What it does is
+// covered against a real one in move-application.integration.test.ts; here it
+// is stubbed so the board can be rendered at all.
+jest.mock('@/app/actions/move-application', () => ({
+  moveApplication: jest.fn(async () => ({ ok: true })),
+}));
+
 import { Board } from '../board';
 
 /**
@@ -184,6 +192,26 @@ describe('the card', () => {
 
     expect(screen.queryByText(/choice subteam/)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ada Bell' })).toBeInTheDocument();
+  });
+
+  it('offers a drag handle that names who it moves', () => {
+    // A real button, so it is reachable by Tab and activated by Space — which
+    // is what makes the board operable without a pointer at all.
+    renderBoard([card()]);
+
+    const handle = screen.getByRole('button', { name: 'Move Ada Bell' });
+    expect(handle).toHaveAttribute('type', 'button');
+  });
+
+  it('keeps the drag handle and the name as separate targets', () => {
+    // One control that both navigates and drags means every aborted drag opens
+    // an application, and every slow click starts a drag.
+    renderBoard([card()]);
+
+    const link = screen.getByRole('link', { name: 'Ada Bell' });
+    const handle = screen.getByRole('button', { name: 'Move Ada Bell' });
+    expect(link).not.toBe(handle);
+    expect(handle).not.toContainElement(link);
   });
 
   it('does not put the answers or the resume on the card', () => {

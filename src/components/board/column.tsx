@@ -1,3 +1,6 @@
+'use client';
+
+import { useDroppable } from '@dnd-kit/core';
 import type {
   BoardCard as BoardCardData,
   BoardSubteam,
@@ -44,13 +47,20 @@ export function BoardColumn({
   const count = cards.length;
   const countLabel = `${count} ${count === 1 ? 'applicant' : 'applicants'}`;
 
+  // Unconditional, because hooks are — and because a collapsed column has to
+  // stay droppable, so both branches below need this same ref.
+  const { setNodeRef, isOver } = useDroppable({ id: status });
+  const highlight = isOver ? 'border-ring bg-accent' : 'border-border';
+
   if (collapsed) {
     return (
       <section
+        ref={setNodeRef}
         aria-label={`${label} column, ${countLabel}`}
         data-status={status}
         data-collapsed="true"
-        className="flex w-12 shrink-0 flex-col rounded-lg border border-border bg-muted"
+        data-drop-zone={status}
+        className={`flex w-12 shrink-0 flex-col rounded-lg border bg-muted ${highlight}`}
       >
         <button
           type="button"
@@ -78,7 +88,7 @@ export function BoardColumn({
       aria-label={`${label} column, ${countLabel}`}
       data-status={status}
       data-collapsed="false"
-      className="flex w-72 shrink-0 flex-col rounded-lg border border-border"
+      className={`flex w-72 shrink-0 flex-col rounded-lg border ${highlight}`}
     >
       <div className="sticky top-0 z-10 flex items-center gap-2 rounded-t-lg border-b border-border bg-background px-3 py-2">
         <h2 className="text-sm font-medium">{label}</h2>
@@ -93,7 +103,7 @@ export function BoardColumn({
         </button>
       </div>
 
-      <div data-drop-zone={status} className="min-h-32 flex-1 p-2">
+      <div ref={setNodeRef} data-drop-zone={status} className="min-h-32 flex-1 p-2">
         <ul className="flex flex-col gap-2">
           {cards.map((card) => (
             <BoardCard

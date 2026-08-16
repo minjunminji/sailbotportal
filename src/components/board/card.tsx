@@ -1,4 +1,8 @@
+'use client';
+
 import Link from 'next/link';
+import { useDraggable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 import type { BoardCard as BoardCardData, BoardSubteam } from '@/lib/applications/queries';
 import { daysInColumn, daysInColumnLabel, shortYearLabel } from './columns';
 
@@ -12,16 +16,20 @@ import { daysInColumn, daysInColumnLabel, shortYearLabel } from './columns';
  * their answers, their resume, the full ranking — is one click away in the
  * detail view, which is where reading actually happens.
  *
- * The name is the link rather than the whole card. A card wrapped in an anchor
- * is a card that navigates when a drag ends a pixel short of a drop, and Task 4
- * puts a drag handle on this same element; a small explicit target is both
- * safer and a better keyboard stop.
+ * THE DRAG HANDLE IS A SEPARATE BUTTON, and the name is a separate link. Making
+ * the whole card draggable would mean every click on the name began a drag that
+ * had to be told apart from a tap, and making the whole card a link would mean
+ * every drag that ended a pixel short of a column navigated away instead. Two
+ * small explicit targets avoid both, and give the keyboard two distinct stops:
+ * Enter on the name opens the application, Space on the handle picks the card
+ * up.
  */
 export function BoardCard({
   card,
   teamSlug,
   now,
   subteamsById,
+  overlay = false,
 }: {
   card: BoardCardData;
   teamSlug: string;
@@ -29,6 +37,11 @@ export function BoardCard({
   now: string;
   /** Resolves `assignedSubteamId`, which arrives as a bare uuid. */
   subteamsById: Map<string, BoardSubteam>;
+  /**
+   * True for the copy rendered inside `DragOverlay`, which follows the cursor
+   * and must not register a second draggable under the same id.
+   */
+  overlay?: boolean;
 }) {
   const days = daysInColumn(card.statusChangedAt, now);
 
@@ -40,14 +53,46 @@ export function BoardCard({
   const assigned = card.assignedSubteamId ? subteamsById.get(card.assignedSubteamId) : undefined;
   const subteam = assigned ?? card.firstChoiceSubteam;
 
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: card.id,
+    // The column the card starts in, so the keyboard sensor knows which way is
+    // "next" before the card has been moved at all.
+    data: { status: card.status },
+    disabled: overlay,
+  });
+
   return (
-    <li className="rounded-lg border border-border bg-card p-3 text-card-foreground">
-      <Link
-        href={`/admin/${teamSlug}/applications/${card.id}`}
-        className="rounded-sm text-base font-medium focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
-      >
-        {card.applicantName}
-      </Link>
+    <li
+      ref={overlay ? undefined : setNodeRef}
+      style={overlay ? undefined : { transform: CSS.Translate.toString(transform) }}
+      data-card={card.id}
+      className={`rounded-lg border border-border bg-card p-3 text-card-foreground ${
+        // Left in place at reduced opacity rather than removed: taking the card
+        // out of the column would make the column reflow under the cursor
+        // mid-drag, moving the drop target away from where it was aimed.
+        isDragging ? 'opacity-40' : ''
+      } ${overlay ? 'shadow-lg' : ''}`}
+    >
+      <div className="flex items-start gap-2">
+        <Link
+          href={`/admin/${teamSlug}/applications/${card.id}`}
+          className="rounded-sm text-base font-medium focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+        >
+          {card.applicantName}
+        </Link>
+
+        {overlay ? null : (
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            className="ml-auto cursor-grab rounded-md border border-border px-2 py-1 text-sm text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+          >
+            <span aria-hidden="true">⠿</span>
+            <span className="sr-only">Move {card.applicantName}</span>
+          </button>
+        )}
+      </div>
 
       <p className="mt-1 text-sm text-muted-foreground">
         {shortYearLabel(card.yearOfStudy)} · {card.homeDepartment}
