@@ -1,4 +1,10 @@
-import { KeyboardCode, type KeyboardCoordinateGetter } from '@dnd-kit/core';
+import {
+  KeyboardCode,
+  closestCenter,
+  pointerWithin,
+  type CollisionDetection,
+  type KeyboardCoordinateGetter,
+} from '@dnd-kit/core';
 import type { ApplicationStatus } from '@/lib/applications/queries';
 import { BOARD_COLUMNS } from './columns';
 
@@ -17,6 +23,25 @@ import { BOARD_COLUMNS } from './columns';
  * feature the plan calls expensive to retrofit, and the reason is that it has
  * to be designed into the sensor rather than bolted on afterwards.
  */
+
+/**
+ * Which column the dragged card is currently over.
+ *
+ * `pointerWithin` asks which droppable contains the POINTER, which is the right
+ * question for a mouse: a card is nearly as wide as a column, so a rectangle
+ * test says a card that has barely left its own column still overlaps it most
+ * and never registers the neighbour under the cursor.
+ *
+ * A KEYBOARD DRAG HAS NO POINTER. `pointerWithin` returns nothing at all, `over`
+ * stays null, and the card lifts, announces itself, and drops exactly where it
+ * started — which is what it did here until this function existed. Falling back
+ * to `closestCenter`, which compares rectangles, gives the keyboard a real
+ * answer while leaving the pointer behaviour untouched.
+ */
+export const boardCollisionDetection: CollisionDetection = (args) => {
+  const underPointer = pointerWithin(args);
+  return underPointer.length > 0 ? underPointer : closestCenter(args);
+};
 
 /**
  * The column `direction` places from `current`, or null at either end.

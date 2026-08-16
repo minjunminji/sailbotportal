@@ -6,7 +6,6 @@ import {
   DragOverlay,
   KeyboardSensor,
   PointerSensor,
-  pointerWithin,
   useSensor,
   useSensors,
   type Announcements,
@@ -22,7 +21,7 @@ import { moveApplication } from '@/app/actions/move-application';
 import { BOARD_COLUMNS, DEFAULT_COLLAPSED, groupByStatus } from './columns';
 import { BoardColumn } from './column';
 import { BoardCard } from './card';
-import { boardCoordinateGetter } from './keyboard';
+import { boardCollisionDetection, boardCoordinateGetter } from './keyboard';
 import { resolveMove } from './moves';
 
 /**
@@ -170,11 +169,10 @@ export function Board({
         // mismatch and refuses to patch. A stable id makes both sides agree.
         id="board"
         sensors={sensors}
-        // `pointerWithin` rather than the default rectangle intersection: a card
-        // is nearly as wide as a column, so with rectangles a drag that has
-        // barely left its own column still overlaps it most and never registers
-        // the neighbour under the cursor.
-        collisionDetection={pointerWithin}
+        // Pointer-first, rectangles for the keyboard. See the note on
+        // `boardCollisionDetection` — plain `pointerWithin` silently made every
+        // keyboard drag a no-op.
+        collisionDetection={boardCollisionDetection}
         accessibility={{ announcements }}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}

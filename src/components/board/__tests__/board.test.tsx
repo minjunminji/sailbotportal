@@ -212,24 +212,24 @@ describe('the card', () => {
     expect(screen.getByRole('link', { name: 'Ada Bell' })).toBeInTheDocument();
   });
 
-  it('offers a drag handle that names who it moves', () => {
-    // A real button, so it is reachable by Tab and activated by Space — which
-    // is what makes the board operable without a pointer at all.
+  it('makes the whole card draggable, not just a handle', () => {
     renderBoard([card()]);
 
-    const handle = screen.getByRole('button', { name: 'Move Ada Bell' });
-    expect(handle).toHaveAttribute('type', 'button');
+    const element = document.querySelector('[data-card="app-1"]')!;
+    expect(element).toHaveAttribute('aria-roledescription', 'draggable');
+    // Focusable, so Space can pick the card up. Without this the board would
+    // be unusable without a pointer.
+    expect(element).toHaveAttribute('tabindex', '0');
   });
 
-  it('keeps the drag handle and the name as separate targets', () => {
-    // One control that both navigates and drags means every aborted drag opens
-    // an application, and every slow click starts a drag.
+  it('opens the application from the name, which sits inside the drag target', () => {
+    // The link has to survive being nested in a draggable: the pointer
+    // sensor's activation distance is what tells a click apart from a drag.
     renderBoard([card()]);
 
     const link = screen.getByRole('link', { name: 'Ada Bell' });
-    const handle = screen.getByRole('button', { name: 'Move Ada Bell' });
-    expect(link).not.toBe(handle);
-    expect(handle).not.toContainElement(link);
+    expect(link).toHaveAttribute('href', '/admin/soft/applications/app-1');
+    expect(document.querySelector('[data-card="app-1"]')).toContainElement(link);
   });
 
   it('does not put the answers or the resume on the card', () => {

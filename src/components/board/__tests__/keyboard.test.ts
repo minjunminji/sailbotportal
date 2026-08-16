@@ -1,5 +1,5 @@
 import { KeyboardCode } from '@dnd-kit/core';
-import { boardCoordinateGetter, nextColumnStatus } from '../keyboard';
+import { boardCollisionDetection, boardCoordinateGetter, nextColumnStatus } from '../keyboard';
 import { BOARD_COLUMNS } from '../columns';
 
 /**
@@ -72,6 +72,47 @@ function press(code: string, context: ReturnType<typeof contextWith>) {
   } as any);
   return { result, event };
 }
+
+/**
+ * The bug this suite exists for: `pointerWithin` alone answers "which droppable
+ * contains the pointer", and a keyboard drag has no pointer. Every keyboard
+ * move was silently a no-op — the card lifted, announced itself, and dropped
+ * back where it started — while pointer drags worked perfectly, so nothing
+ * looked broken.
+ */
+describe('boardCollisionDetection', () => {
+  function rect(left: number, width: number) {
+    return { left, top: 0, right: left + width, bottom: 400, width, height: 400 };
+  }
+
+  const rects = new Map<string, ReturnType<typeof rect>>([
+    ['applied', rect(0, 300)],
+    ['reviewing', rect(320, 300)],
+  ]);
+
+  function args(over: 'applied' | 'reviewing', pointer: { x: number; y: number } | null) {
+    const target = rects.get(over)!;
+    return {
+      active: { id: 'card-1', data: { current: {} }, rect: { current: {} } },
+      collisionRect: rect(target.left, target.width),
+      droppableRects: rects,
+      droppableContainers: [...rects].map(([id, r]) => ({ id, rect: { current: r } })),
+      pointerCoordinates: pointer,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any;
+  }
+
+  it('finds a column with no pointer at all, which is the keyboard case', () => {
+    const collisions = boardCollisionDetection(args('reviewing', null));
+    expect(collisions.length).toBeGreaterThan(0);
+    expect(collisions[0].id).toBe('reviewing');
+  });
+
+  it('still answers for the column the pointer is inside', () => {
+    const collisions = boardCollisionDetection(args('reviewing', { x: 150, y: 200 }));
+    expect(collisions[0].id).toBe('applied');
+  });
+});
 
 describe('boardCoordinateGetter', () => {
   it('aims at the centre of the next column', () => {

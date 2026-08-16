@@ -65,39 +65,31 @@ export function BoardCard({
     <li
       ref={overlay ? undefined : setNodeRef}
       style={overlay ? undefined : { transform: CSS.Translate.toString(transform) }}
+      // The WHOLE CARD is the drag target. `attributes` also makes it a
+      // keyboard stop that Space picks up, so removing the handle did not
+      // remove the ability to move a card without a pointer.
+      {...(overlay ? {} : attributes)}
+      {...(overlay ? {} : listeners)}
       data-card={card.id}
-      className={`rounded-lg border border-border bg-card p-3 text-card-foreground ${
+      className={`rounded-lg border border-border bg-card p-3 text-card-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+        overlay ? 'shadow-lg' : 'cursor-grab active:cursor-grabbing'
+      } ${
         // Left in place at reduced opacity rather than removed: taking the card
         // out of the column would make the column reflow under the cursor
         // mid-drag, moving the drop target away from where it was aimed.
         isDragging ? 'opacity-40' : ''
-      } ${overlay ? 'shadow-lg' : ''}`}
+      }`}
     >
-      <div className="flex items-start gap-2">
-        <Link
-          href={`/admin/${teamSlug}/applications/${card.id}`}
-          className="rounded-sm text-base font-medium focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
-        >
-          {card.applicantName}
-        </Link>
-
-        {overlay ? null : (
-          <button
-            type="button"
-            {...attributes}
-            {...listeners}
-            // No resting border: the handle sits on a card that already has
-            // one, and a box around a grip reads as a button to press rather
-            // than a thing to drag. The ring is `focus-visible` so it appears
-            // for the keyboard — which is the only way to reach the handle
-            // without a pointer — and not on every mouse-down.
-            className="ml-auto cursor-grab rounded-md px-2 py-1 text-sm text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          >
-            <span aria-hidden="true">⠿</span>
-            <span className="sr-only">Move {card.applicantName}</span>
-          </button>
-        )}
-      </div>
+      {/* The name is the way in to the application. It stays a real link — so
+          it can be opened in a new tab, copied, and reached by Tab — and the
+          pointer sensor's 5px threshold is what keeps a plain click on it from
+          being read as the start of a drag. */}
+      <Link
+        href={`/admin/${teamSlug}/applications/${card.id}`}
+        className="rounded-sm text-base font-medium hover:underline hover:underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      >
+        {card.applicantName}
+      </Link>
 
       <p className="mt-1 text-sm text-muted-foreground">
         {shortYearLabel(card.yearOfStudy)} · {card.homeDepartment}
