@@ -53,6 +53,20 @@ export function BoardColumn({
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const highlight = isOver ? 'border-ring bg-accent' : 'border-border';
 
+  // An expanded column draws its outline in TWO PIECES rather than one border
+  // on the section: the header carries the top edge and its own left and right
+  // sides, the card area carries the sides and the bottom.
+  //
+  // The header is sticky, so with a single border on the section the outline
+  // scrolled away and left the pinned title floating with nothing around it.
+  // Splitting it means the top of the frame is pinned along with the title.
+  // The side edges below still scroll, but a straight vertical line looks
+  // identical wherever it is, so the seam is invisible and the column reads as
+  // a fixed frame with its cards moving inside.
+  const edge = isOver ? 'border-ring' : 'border-border';
+  // The header must be opaque or cards show through it as they pass under.
+  const headerSurface = isOver ? 'bg-accent' : 'bg-background';
+
   if (collapsed) {
     return (
       <section
@@ -113,12 +127,20 @@ export function BoardColumn({
       aria-label={`${label} column, ${countLabel}`}
       data-status={status}
       data-collapsed="false"
-      className={`flex w-72 shrink-0 flex-col rounded-lg border ${highlight}`}
+      // No border here — the header and the card area draw it between them.
+      className={`flex w-72 shrink-0 flex-col rounded-lg ${isOver ? 'bg-accent' : ''}`}
     >
-      {/* No bottom rule. The gap between the header and the first card already
+      {/* Sticky to the board's scroller, so the column you are scrolling
+          through keeps saying which column it is. `bg-background` because a
+          transparent header would let cards slide visibly underneath it, and
+          `z-10` to sit above them rather than have them draw over it.
+
+          No bottom rule. The gap between the header and the first card already
           separates them, and a line here reads as the top edge of a second box
           inside the column. */}
-      <div className="flex items-center gap-2 px-3 py-2">
+      <div
+        className={`sticky top-0 z-10 flex items-center gap-2 rounded-t-lg border-x border-t px-3 py-2 ${edge} ${headerSurface}`}
+      >
         <h2 className="text-sm font-medium">{label}</h2>
         <span className="text-sm text-muted-foreground">{count}</span>
         <button
@@ -137,7 +159,10 @@ export function BoardColumn({
           drop target. `relative` gives the cards' `sr-only` spans a containing
           block inside the board — without one they resolve against the initial
           containing block and stretch the whole document sideways. */}
-      <div data-drop-zone={status} className="relative flex-1 p-2">
+      <div
+        data-drop-zone={status}
+        className={`relative flex-1 rounded-b-lg border-x border-b p-2 ${edge}`}
+      >
         <ul className="flex flex-col gap-2">
           {cards.map((card) => (
             <BoardCard
