@@ -51,3 +51,6 @@ supabase/.branches/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Copied from node_modules by scripts/copy-pdf-worker.mjs at predev/prebuild.
+/public/pdf.worker.min.js

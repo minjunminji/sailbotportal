@@ -82,3 +82,49 @@
     @apply bg-background text-foreground;
   }
 }
+
+/**
+ * The resume viewer's text layer.
+ *
+ * pdf.js draws the page to a canvas and then lays TRANSPARENT text on top of
+ * it, positioned run by run, so that selection, copying and find-in-page work
+ * against what looks like an image. These rules are what make the invisible
+ * text line up with the visible pixels; without them the spans stack at the
+ * origin and selecting anything highlights the wrong words.
+ *
+ * Not in `@layer base`, because Tailwind utilities would otherwise win over
+ * them and pdf.js sets its positions inline.
+ */
+.pdf-text-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  line-height: 1;
+  text-align: initial;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  /* pdf.js expresses every offset as a multiple of this; the component sets it
+     per page to the scale that page was rendered at. */
+  --scale-factor: 1;
+}
+
+.pdf-text-layer span,
+.pdf-text-layer br {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0 0;
+}
+
+/* Selection has to be visible even though the text is not. */
+.pdf-text-layer ::selection {
+  background: color-mix(in oklab, var(--ring) 40%, transparent);
+}
+
+/* pdf.js marks the run it has scrolled to during a find. */
+.pdf-text-layer .highlight {
+  background: color-mix(in oklab, var(--ring) 35%, transparent);
+  border-radius: 2px;
+}
