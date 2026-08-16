@@ -216,8 +216,14 @@ export function Board({
         </div>
 
         {/* The card follows the cursor from here rather than moving in place,
-            so dragging out of a scrolling column does not fight the scroll. */}
-        <DragOverlay>
+            so dragging out of a scrolling column does not fight the scroll.
+
+            `dropAnimation={null}` because the default flies the overlay back to
+            the card's slot over ~250ms. The move itself is optimistic and
+            lands immediately, so that animation is time spent watching a card
+            catch up with a decision already made — and it reads as lag when
+            moving several cards in a row. */}
+        <DragOverlay dropAnimation={null}>
           {activeCard ? (
             <ul>
               <BoardCard
