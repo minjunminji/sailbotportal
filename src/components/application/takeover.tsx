@@ -16,6 +16,10 @@ import { useEffect, useRef, type ReactNode } from 'react';
  * intercepting route put an application's URL in the address bar; leaving that
  * URL in place while removing the view would leave the two disagreeing, and the
  * back button would then appear to do nothing.
+ *
+ * It covers the viewport rather than floating over it. Reading an application
+ * is the task, not a glance at one — the board behind would only be something
+ * to lose the cursor in.
  */
 export function Takeover({ label, children }: { label: string; children: ReactNode }) {
   const router = useRouter();
@@ -33,16 +37,15 @@ export function Takeover({ label, children }: { label: string; children: ReactNo
       // Fires for Escape and for `close()` alike, so both routes out lead to
       // the same place.
       onClose={() => router.back()}
-      onClick={(event) => {
-        // A click on the backdrop reports the dialog itself as its target;
-        // clicks on anything inside report that child. This is the whole
-        // difference between "clicked outside" and "clicked the content".
-        if (event.target === ref.current) ref.current?.close();
-      }}
-      className="h-[90dvh] w-[95vw] max-w-6xl rounded-lg border border-border bg-background p-0 text-foreground backdrop:bg-black/40"
+      // FILLS THE VIEWPORT. `fixed inset-0` rather than a width and a height,
+      // and `m-0 max-w-none max-h-none` to beat the user-agent's own sizing —
+      // a modal dialog is centred by `margin: auto`, which Tailwind's preflight
+      // resets to `0`, so without this it sits in the top-left corner at
+      // whatever size it was given.
+      //
+      // There is no backdrop left to click, so closing is Escape or the button.
+      className="fixed inset-0 m-0 h-auto max-h-none w-auto max-w-none border-0 bg-background p-0 text-foreground"
     >
-      {/* The padding lives here rather than on the dialog, so a click landing
-          in the padding still counts as a click on the content. */}
       <div className="flex h-full min-h-0 flex-col gap-4 p-6">
         <button
           type="button"
