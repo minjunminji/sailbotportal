@@ -56,7 +56,7 @@ export function ResumeUpload({
   }
 
   return (
-    <section id={fieldId} aria-labelledby="resume-heading">
+    <section id={fieldId} aria-labelledby="resume-heading" className="scroll-mt-8">
       <h2 id="resume-heading" className="text-lg font-semibold">
         Your resume
       </h2>

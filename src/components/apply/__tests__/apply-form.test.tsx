@@ -69,9 +69,22 @@ async function fillIdentity(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/Why do you want to join/), 'Boats.');
 }
 
+/**
+ * Review is deliberately offered twice: as a shortcut in the section rail,
+ * which is on screen throughout, and at the end of the form where someone who
+ * has just finished the last question expects it. These tests mean the one at
+ * the end of the form.
+ */
+async function clickReview(user: ReturnType<typeof userEvent.setup>) {
+  const rail = screen.queryByRole('navigation', { name: /application sections/i });
+  const buttons = screen.getAllByRole('button', { name: 'Review your application' });
+  const inForm = buttons.find((button) => !rail?.contains(button));
+  await user.click(inForm ?? buttons[0]);
+}
+
 async function uploadResume(user: ReturnType<typeof userEvent.setup>) {
   await user.upload(
-    screen.getByLabelText(/^Resume/),
+    screen.getByLabelText(/^Resume/, { selector: 'input' }),
     new File(['%PDF-'], 'cv.pdf', { type: 'application/pdf' }),
   );
   await screen.findByText(/Uploaded cv.pdf/);
@@ -181,7 +194,7 @@ describe('draft autosave', () => {
     await user.type(screen.getByLabelText(/What is ballast/), 'Weight, low down.');
     await uploadResume(user);
 
-    await user.click(screen.getByRole('button', { name: 'Review your application' }));
+    await clickReview(user);
     await user.click(screen.getByRole('button', { name: 'Submit application' }));
 
     await screen.findByRole('heading', { name: 'Your application is in' });
@@ -196,7 +209,7 @@ describe('errors', () => {
     const user = userEvent.setup();
     render(<ApplyForm data={data} submit={succeeds()} />);
 
-    await user.click(screen.getByRole('button', { name: 'Review your application' }));
+    await clickReview(user);
 
     const summary = screen.getByRole('alert');
     expect(summary).toHaveTextContent('Full name: Enter your name');
@@ -208,7 +221,7 @@ describe('errors', () => {
     const user = userEvent.setup();
     render(<ApplyForm data={data} submit={succeeds()} />);
 
-    await user.click(screen.getByRole('button', { name: 'Review your application' }));
+    await clickReview(user);
 
     expect(screen.getByRole('link', { name: /Full name: Enter your name/ })).toHaveAttribute(
       'href',
@@ -223,7 +236,7 @@ describe('errors', () => {
     await fillIdentity(user);
     await user.click(screen.getByLabelText('Yes'));
     await uploadResume(user);
-    await user.click(screen.getByRole('button', { name: 'Review your application' }));
+    await clickReview(user);
 
     expect(screen.getByRole('alert')).toHaveTextContent(
       'What is ballast?: This question is required',
@@ -253,7 +266,7 @@ describe('errors', () => {
     await user.click(screen.getByLabelText('Yes'));
     await user.type(screen.getByLabelText(/What is ballast/), 'Weight, low down.');
     await uploadResume(user);
-    await user.click(screen.getByRole('button', { name: 'Review your application' }));
+    await clickReview(user);
     await user.click(screen.getByRole('button', { name: 'Submit application' }));
 
     const summary = await screen.findByRole('alert');
@@ -287,7 +300,7 @@ describe('submission', () => {
     await user.click(screen.getByRole('button', { name: /Add Pathfinding/ }));
     await uploadResume(user);
 
-    await user.click(screen.getByRole('button', { name: 'Review your application' }));
+    await clickReview(user);
     await user.click(screen.getByRole('button', { name: 'Submit application' }));
 
     await screen.findByRole('heading', { name: 'Your application is in' });
@@ -320,7 +333,7 @@ describe('submission', () => {
     await user.click(screen.getByLabelText('Yes'));
     await user.type(screen.getByLabelText(/What is ballast/), 'Weight, low down.');
     await uploadResume(user);
-    await user.click(screen.getByRole('button', { name: 'Review your application' }));
+    await clickReview(user);
 
     expect(screen.getByRole('heading', { name: 'Review your application' })).toBeInTheDocument();
     expect(screen.getByText('Weight, low down.')).toBeInTheDocument();

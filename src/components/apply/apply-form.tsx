@@ -15,8 +15,12 @@ import { IdentitySection } from './identity-section';
 import { QuestionList } from './question-field';
 import { ResumeUpload } from './resume-upload';
 import { ReviewSection } from './review-section';
+import { SectionRail } from './section-rail';
+import { formSections } from './sections';
 import { clearDraft, loadDraft, saveDraft } from './storage';
-import { TeamSection } from './team-section';
+import { TeamGates } from './team-gates';
+import { TeamQuestions } from './team-questions';
+import { useActiveSection } from './use-active-section';
 import {
   coreFieldId,
   emptyFormState,
@@ -117,6 +121,11 @@ export function ApplyForm({
 
   const fieldErrors = errorMap(errors);
   const selectedPostings = data.postings.filter((posting) => state.teams[posting.slug]?.selected);
+
+  // The rail and the page below are generated from this one array, so a row
+  // cannot exist without the section it links to, or the reverse.
+  const sections = formSections(data, state, errors);
+  const { activeId, onNavigate } = useActiveSection(sections.map((section) => section.id));
 
   function update(change: (previous: FormState) => FormState) {
     setEdited((previous) => change(previous ?? draft ?? initial));
@@ -244,144 +253,180 @@ export function ApplyForm({
         </div>
       ) : null}
 
-      {phase === 'review' ? (
-        <div className="mt-8">
-          <ReviewSection data={data} state={state} onEdit={() => setPhase('form')} />
-        </div>
-      ) : (
-        <div className="mt-8 flex flex-col gap-12">
-          <IdentitySection
-            name={state.name}
-            email={state.email}
-            yearOfStudy={state.yearOfStudy}
-            homeDepartment={state.homeDepartment}
-            errors={fieldErrors}
-            disabled={submitting}
-            onChange={(field, value) => update((previous) => ({ ...previous, [field]: value }))}
-          />
-
-          {visibleCoreQuestions(data, state).length > 0 ? (
-            <section aria-labelledby="shared-questions-heading">
-              <h2 id="shared-questions-heading" className="text-lg font-semibold">
-                About your interest in Sailbot
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Asked once, whichever teams you apply to.
-              </p>
-              <div className="mt-6">
-                <QuestionList
-                  questions={visibleCoreQuestions(data, state)}
-                  fieldIdFor={coreFieldId}
-                  answers={state.coreAnswers}
-                  errors={fieldErrors}
-                  disabled={submitting}
-                  // A core `file` question would be resolved against any open
-                  // posting; the route checks the question really belongs to it.
-                  uploadPostingSlug={data.postings[0]?.slug ?? ''}
-                  onAnswer={(questionId, value) =>
-                    update((previous) => ({
-                      ...previous,
-                      coreAnswers: writeAnswer(previous.coreAnswers, questionId, value),
-                    }))
-                  }
-                />
-              </div>
-            </section>
+      <div className="mt-8 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-12">
+        {/*
+          Hidden below `lg` rather than reshaped for it. A sticky element
+          competing with an on-screen keyboard and a focused textarea costs a
+          phone more room than the orientation is worth. Also hidden during
+          review, when none of the sections it links to are on the page.
+        */}
+        <div className="hidden lg:block">
+          {phase === 'form' ? (
+            <SectionRail
+              sections={sections}
+              activeId={activeId}
+              onNavigate={onNavigate}
+              applyingTo={selectedPostings.map((posting) => posting.teamName)}
+              onReview={handleReview}
+              disabled={submitting}
+            />
           ) : null}
+        </div>
 
-          <div id="team-selection" className="flex flex-col gap-12">
-            {data.postings.map((posting) => (
-              <TeamSection
-                key={posting.slug}
-                posting={posting}
-                state={state.teams[posting.slug]}
+        <div className="min-w-0">
+          {phase === 'review' ? (
+            <div>
+              <ReviewSection data={data} state={state} onEdit={() => setPhase('form')} />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-12">
+              <IdentitySection
+                name={state.name}
+                email={state.email}
+                yearOfStudy={state.yearOfStudy}
+                homeDepartment={state.homeDepartment}
                 errors={fieldErrors}
                 disabled={submitting}
-                onSelect={(selected) =>
+                onChange={(field, value) => update((previous) => ({ ...previous, [field]: value }))}
+              />
+
+              {visibleCoreQuestions(data, state).length > 0 ? (
+                <section
+                  id="shared-questions"
+                  aria-labelledby="shared-questions-heading"
+                  className="scroll-mt-8"
+                >
+                  <h2 id="shared-questions-heading" className="text-lg font-semibold">
+                    About your interest in Sailbot
+                  </h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Asked once, whichever teams you apply to.
+                  </p>
+                  <div className="mt-6">
+                    <QuestionList
+                      questions={visibleCoreQuestions(data, state)}
+                      fieldIdFor={coreFieldId}
+                      answers={state.coreAnswers}
+                      errors={fieldErrors}
+                      disabled={submitting}
+                      // A core `file` question would be resolved against any open
+                      // posting; the route checks the question really belongs to it.
+                      uploadPostingSlug={data.postings[0]?.slug ?? ''}
+                      onAnswer={(questionId, value) =>
+                        update((previous) => ({
+                          ...previous,
+                          coreAnswers: writeAnswer(previous.coreAnswers, questionId, value),
+                        }))
+                      }
+                    />
+                  </div>
+                </section>
+              ) : null}
+
+              <TeamGates
+                postings={data.postings}
+                teams={state.teams}
+                errors={fieldErrors}
+                disabled={submitting}
+                onSelect={(slug, selected) =>
                   update((previous) => ({
                     ...previous,
                     teams: {
                       ...previous.teams,
-                      [posting.slug]: { ...previous.teams[posting.slug], selected },
-                    },
-                  }))
-                }
-                onRank={(rankedSubteams) =>
-                  update((previous) => ({
-                    ...previous,
-                    teams: {
-                      ...previous.teams,
-                      [posting.slug]: { ...previous.teams[posting.slug], rankedSubteams },
-                    },
-                  }))
-                }
-                onAnswer={(questionId, value) =>
-                  update((previous) => ({
-                    ...previous,
-                    teams: {
-                      ...previous.teams,
-                      [posting.slug]: {
-                        ...previous.teams[posting.slug],
-                        answers: writeAnswer(
-                          previous.teams[posting.slug].answers,
-                          questionId,
-                          value,
-                        ),
-                      },
+                      [slug]: { ...previous.teams[slug], selected },
                     },
                   }))
                 }
               />
-            ))}
+
+              {/*
+            Only chosen teams render, which is the same condition that decides
+            whether the rail carries a row for them.
+          */}
+              {selectedPostings.map((posting) => (
+                <TeamQuestions
+                  key={posting.slug}
+                  posting={posting}
+                  state={state.teams[posting.slug]}
+                  errors={fieldErrors}
+                  disabled={submitting}
+                  onRank={(rankedSubteams) =>
+                    update((previous) => ({
+                      ...previous,
+                      teams: {
+                        ...previous.teams,
+                        [posting.slug]: { ...previous.teams[posting.slug], rankedSubteams },
+                      },
+                    }))
+                  }
+                  onAnswer={(questionId, value) =>
+                    update((previous) => ({
+                      ...previous,
+                      teams: {
+                        ...previous.teams,
+                        [posting.slug]: {
+                          ...previous.teams[posting.slug],
+                          answers: writeAnswer(
+                            previous.teams[posting.slug].answers,
+                            questionId,
+                            value,
+                          ),
+                        },
+                      },
+                    }))
+                  }
+                />
+              ))}
+
+              <ResumeUpload
+                resume={state.resume}
+                error={fieldErrors.get('resume-upload')}
+                disabled={submitting}
+                onChange={(resume) => update((previous) => ({ ...previous, resume }))}
+              />
+            </div>
+          )}
+
+          {/* Hidden from sight and from assistive technology; never focusable. */}
+          <div className="sr-only" aria-hidden="true">
+            <label htmlFor="website-field">Leave this field empty</label>
+            <input
+              id="website-field"
+              name="website"
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={honeypot}
+              onChange={(event) => setHoneypot(event.target.value)}
+            />
           </div>
 
-          <ResumeUpload
-            resume={state.resume}
-            error={fieldErrors.get('resume-upload')}
-            disabled={submitting}
-            onChange={(resume) => update((previous) => ({ ...previous, resume }))}
-          />
+          <div className="mt-12 flex flex-wrap gap-4">
+            {phase === 'form' ? (
+              <button
+                type="button"
+                onClick={handleReview}
+                disabled={submitting}
+                className="rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50"
+              >
+                Review your application
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={submitting}
+                className="rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50"
+              >
+                {submitting ? 'Sending…' : 'Submit application'}
+              </button>
+            )}
+            <p className="self-center text-sm text-muted-foreground">
+              {selectedPostings.length === 0
+                ? 'No teams chosen yet.'
+                : `Applying to ${selectedPostings.map((posting) => posting.teamName).join(', ')}.`}
+            </p>
+          </div>
         </div>
-      )}
-
-      {/* Hidden from sight and from assistive technology; never focusable. */}
-      <div className="sr-only" aria-hidden="true">
-        <label htmlFor="website-field">Leave this field empty</label>
-        <input
-          id="website-field"
-          name="website"
-          type="text"
-          tabIndex={-1}
-          autoComplete="off"
-          value={honeypot}
-          onChange={(event) => setHoneypot(event.target.value)}
-        />
-      </div>
-
-      <div className="mt-12 flex flex-wrap gap-4">
-        {phase === 'form' ? (
-          <button
-            type="button"
-            onClick={handleReview}
-            disabled={submitting}
-            className="rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50"
-          >
-            Review your application
-          </button>
-        ) : (
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50"
-          >
-            {submitting ? 'Sending…' : 'Submit application'}
-          </button>
-        )}
-        <p className="self-center text-sm text-muted-foreground">
-          {selectedPostings.length === 0
-            ? 'No teams chosen yet.'
-            : `Applying to ${selectedPostings.map((posting) => posting.teamName).join(', ')}.`}
-        </p>
       </div>
     </form>
   );

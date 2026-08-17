@@ -128,3 +128,14 @@
   background: color-mix(in oklab, var(--ring) 35%, transparent);
   border-radius: 2px;
 }
+
+/*
+ * Rail links scroll rather than jump — but only for people who have not asked
+ * the system for less motion. Smooth scrolling across a form this long is a
+ * long slide, and it is a common migraine and vestibular trigger.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}

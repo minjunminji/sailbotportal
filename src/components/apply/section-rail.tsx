@@ -22,6 +22,7 @@ export function SectionRail({
   activeId,
   applyingTo,
   onReview,
+  onNavigate,
   disabled,
 }: {
   sections: FormSection[];
@@ -30,18 +31,26 @@ export function SectionRail({
   /** Team names the application currently covers, in form order. */
   applyingTo: string[];
   onReview: () => void;
+  /** Lets the hook settle the active row immediately instead of mid-scroll. */
+  onNavigate?: (id: string) => void;
   disabled?: boolean;
 }) {
   return (
     <nav
       aria-label="Application sections"
-      // `self-start` is load-bearing: a grid item stretches to the row height by
-      // default, and an item as tall as the form cannot stick to anything.
-      className="sticky top-8 self-start max-h-[calc(100vh-4rem)] overflow-y-auto"
+      // Sticks within its wrapper, which is the grid item and stretches to the
+      // height of the form beside it — that stretch is what gives the rail
+      // something to travel along.
+      className="sticky top-8 max-h-[calc(100vh-4rem)] overflow-y-auto"
     >
       <ul className="flex flex-col gap-1">
         {sections.map((section) => (
-          <RailRow key={section.id} section={section} active={section.id === activeId} />
+          <RailRow
+            key={section.id}
+            section={section}
+            active={section.id === activeId}
+            onNavigate={onNavigate}
+          />
         ))}
       </ul>
 
@@ -71,7 +80,15 @@ export function SectionRail({
   );
 }
 
-function RailRow({ section, active }: { section: FormSection; active: boolean }) {
+function RailRow({
+  section,
+  active,
+  onNavigate,
+}: {
+  section: FormSection;
+  active: boolean;
+  onNavigate?: (id: string) => void;
+}) {
   const complete = section.total > 0 && section.answered >= section.total;
 
   // Built as one string rather than assembled from sibling elements. The
@@ -87,6 +104,10 @@ function RailRow({ section, active }: { section: FormSection; active: boolean })
         href={`#${section.id}`}
         aria-label={announced}
         aria-current={active ? 'true' : undefined}
+        // The navigation itself is left to the browser, which moves focus as
+        // well as the viewport; this only stops the rail flickering through
+        // every section the scroll passes on the way.
+        onClick={() => onNavigate?.(section.id)}
         className={[
           'flex items-center gap-2 rounded-md py-1.5 pr-2 text-sm',
           // The indicator strip is a left border on every row, coloured only on

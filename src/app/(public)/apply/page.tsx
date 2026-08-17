@@ -145,11 +145,15 @@ export default async function ApplyPage() {
   const data = await loadApplyData();
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 p-6">
+    // Wide enough for the rail beside the form without narrowing the form: the
+    // rail is 13rem and the gap 3rem, so the column keeps the 48rem measure it
+    // had when it was alone on the page. Essay fields are read at the same line
+    // length as before.
+    <main className="mx-auto w-full max-w-5xl flex-1 p-6">
       <h1 className="text-2xl font-semibold tracking-tight">Apply to UBC Sailbot</h1>
 
       {data.postings.length === 0 ? (
-        <>
+        <div className="max-w-3xl">
           <p className="mt-3 text-base text-muted-foreground">
             One application covers every team that is recruiting.
           </p>
@@ -171,10 +175,10 @@ export default async function ApplyPage() {
           >
             Back to open postings
           </Link>
-        </>
+        </div>
       ) : (
         <>
-          <p className="mt-3 text-base text-muted-foreground">
+          <p className="mt-3 max-w-3xl text-base text-muted-foreground">
             One application covers every team. Answer a short set of shared questions, say which
             teams you want to apply to, and answer the questions those teams ask. Your answers are
             saved on this device as you type, so you can come back to them.

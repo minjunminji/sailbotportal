@@ -28,7 +28,7 @@ export function IdentitySection({
   disabled?: boolean;
 }) {
   return (
-    <section aria-labelledby="about-you-heading">
+    <section id="about-you" aria-labelledby="about-you-heading" className="scroll-mt-8">
       <h2 id="about-you-heading" className="text-lg font-semibold">
         About you
       </h2>
