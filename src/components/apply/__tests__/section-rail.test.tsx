@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { SectionRail } from '../section-rail';
 import type { FormSection } from '../sections';
 
@@ -24,15 +23,7 @@ function renderRail(
   sections: FormSection[],
   props: Partial<Parameters<typeof SectionRail>[0]> = {},
 ) {
-  return render(
-    <SectionRail
-      sections={sections}
-      activeId={null}
-      applyingTo={[]}
-      onReview={() => {}}
-      {...props}
-    />,
-  );
+  return render(<SectionRail sections={sections} activeId={null} applyingTo={[]} {...props} />);
 }
 
 it('is a landmark a screen reader can jump to', () => {
@@ -101,11 +92,8 @@ describe('footer', () => {
     expect(screen.getByText(/No teams chosen yet/)).toBeInTheDocument();
   });
 
-  it('offers review from the rail, so it is reachable without scrolling to the end', async () => {
-    const onReview = jest.fn();
-    renderRail([section()], { onReview });
-
-    await userEvent.click(screen.getByRole('button', { name: /Review your application/ }));
-    expect(onReview).toHaveBeenCalledTimes(1);
+  it('holds no action of its own — the rail navigates and nothing else', () => {
+    renderRail([section()]);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 });

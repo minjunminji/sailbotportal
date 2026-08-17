@@ -21,19 +21,15 @@ export function SectionRail({
   sections,
   activeId,
   applyingTo,
-  onReview,
   onNavigate,
-  disabled,
 }: {
   sections: FormSection[];
   /** The section currently being read, from `useActiveSection`. */
   activeId: string | null;
   /** Team names the application currently covers, in form order. */
   applyingTo: string[];
-  onReview: () => void;
   /** Lets the hook settle the active row immediately instead of mid-scroll. */
   onNavigate?: (id: string) => void;
-  disabled?: boolean;
 }) {
   return (
     <nav
@@ -55,22 +51,13 @@ export function SectionRail({
       </ul>
 
       {/*
-        Review lives here rather than as a row, because it is the one thing in
-        the rail that acts instead of navigating. Keeping it in the footer also
-        means the way to finish is on screen throughout a form that runs to
-        forty questions, instead of being something you scroll to the bottom to
-        discover you are not yet allowed to do.
+        The rail navigates and nothing else. Review is the form's own action and
+        lives at the end of the form, where someone who has just answered the
+        last question already is; duplicating it here put the same button on
+        screen twice and made the rail look like a place to submit from.
       */}
       <div className="mt-6 border-t border-border pt-4">
-        <button
-          type="button"
-          onClick={onReview}
-          disabled={disabled}
-          className="w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50"
-        >
-          Review your application
-        </button>
-        <p className="mt-3 text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {applyingTo.length === 0
             ? 'No teams chosen yet.'
             : `Applying to ${applyingTo.join(', ')}.`}

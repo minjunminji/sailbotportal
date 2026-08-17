@@ -264,8 +264,6 @@ export function ApplyForm({
               activeId={activeId}
               onNavigate={onNavigate}
               applyingTo={selectedPostings.map((posting) => posting.teamName)}
-              onReview={handleReview}
-              disabled={submitting}
             />
           ) : null}
         </div>

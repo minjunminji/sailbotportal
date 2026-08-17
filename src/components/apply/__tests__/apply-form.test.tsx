@@ -69,17 +69,9 @@ async function fillIdentity(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/Why do you want to join/), 'Boats.');
 }
 
-/**
- * Review is deliberately offered twice: as a shortcut in the section rail,
- * which is on screen throughout, and at the end of the form where someone who
- * has just finished the last question expects it. These tests mean the one at
- * the end of the form.
- */
+/** Review is offered once, at the end of the form. `getBy` asserts that. */
 async function clickReview(user: ReturnType<typeof userEvent.setup>) {
-  const rail = screen.queryByRole('navigation', { name: /application sections/i });
-  const buttons = screen.getAllByRole('button', { name: 'Review your application' });
-  const inForm = buttons.find((button) => !rail?.contains(button));
-  await user.click(inForm ?? buttons[0]);
+  await user.click(screen.getByRole('button', { name: 'Review your application' }));
 }
 
 async function uploadResume(user: ReturnType<typeof userEvent.setup>) {
