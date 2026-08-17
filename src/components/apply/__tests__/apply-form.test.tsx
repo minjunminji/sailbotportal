@@ -69,6 +69,15 @@ async function fillIdentity(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/Why do you want to join/), 'Boats.');
 }
 
+/**
+ * Teams are chosen from one checkbox list, one box per team, named by the team.
+ * This used to be a yes/no radio pair per team, so most of these tests clicked
+ * an ambiguous "Yes".
+ */
+async function chooseTeam(user: ReturnType<typeof userEvent.setup>, teamName: string) {
+  await user.click(screen.getByRole('checkbox', { name: teamName }));
+}
+
 /** Review is offered once, at the end of the form. `getBy` asserts that. */
 async function clickReview(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Review your application' }));
@@ -89,7 +98,7 @@ describe('conditional questions', () => {
     const user = userEvent.setup();
     render(<ApplyForm data={data} submit={succeeds()} />);
 
-    await user.click(screen.getByLabelText('Yes'));
+    await chooseTeam(user, 'Software');
 
     // Nothing ranked: the rule cannot be satisfied, and neither side shows it.
     expect(isQuestionVisible(pathOnlyQuestion, [])).toBe(false);
@@ -115,7 +124,7 @@ describe('conditional questions', () => {
   it('puts the ranking above the questions it decides', async () => {
     const user = userEvent.setup();
     render(<ApplyForm data={data} submit={succeeds()} />);
-    await user.click(screen.getByLabelText('Yes'));
+    await chooseTeam(user, 'Software');
     await user.click(screen.getByRole('button', { name: /Add Pathfinding/ }));
 
     const ranking = screen.getByRole('group', { name: /subteams are you most interested in/ });
@@ -135,7 +144,7 @@ describe('draft autosave', () => {
     const first = render(<ApplyForm data={data} submit={succeeds()} />);
 
     await user.type(screen.getByLabelText(/Full name/), 'Sam Rivers');
-    await user.click(screen.getByLabelText('Yes'));
+    await chooseTeam(user, 'Mechanical');
     await user.type(screen.getByLabelText(/What is ballast/), 'Weight, low down.');
 
     await waitFor(() => expect(window.localStorage.getItem(DRAFT_KEY)).toContain('Sam Rivers'));
@@ -154,7 +163,7 @@ describe('draft autosave', () => {
     const first = render(<ApplyForm data={fileData} submit={succeeds()} />);
 
     await user.type(screen.getByLabelText(/Full name/), 'Sam Rivers');
-    await user.click(screen.getByLabelText('Yes'));
+    await chooseTeam(user, 'Software');
     await user.upload(
       screen.getByLabelText(/Upload your technical quiz/),
       new File(['PK'], 'quiz.zip', { type: 'application/zip' }),
@@ -182,7 +191,7 @@ describe('draft autosave', () => {
     render(<ApplyForm data={data} submit={succeeds()} />);
 
     await fillIdentity(user);
-    await user.click(screen.getByLabelText('Yes'));
+    await chooseTeam(user, 'Mechanical');
     await user.type(screen.getByLabelText(/What is ballast/), 'Weight, low down.');
     await uploadResume(user);
 
@@ -226,7 +235,7 @@ describe('errors', () => {
     render(<ApplyForm data={data} submit={succeeds()} />);
 
     await fillIdentity(user);
-    await user.click(screen.getByLabelText('Yes'));
+    await chooseTeam(user, 'Mechanical');
     await uploadResume(user);
     await clickReview(user);
 
@@ -255,7 +264,7 @@ describe('errors', () => {
     render(<ApplyForm data={data} submit={submit} />);
 
     await fillIdentity(user);
-    await user.click(screen.getByLabelText('Yes'));
+    await chooseTeam(user, 'Mechanical');
     await user.type(screen.getByLabelText(/What is ballast/), 'Weight, low down.');
     await uploadResume(user);
     await clickReview(user);
@@ -285,9 +294,8 @@ describe('submission', () => {
     render(<ApplyForm data={data} submit={submit} />);
 
     await fillIdentity(user);
-    const [mechGate, softGate] = screen.getAllByLabelText('Yes');
-    await user.click(mechGate);
-    await user.click(softGate);
+    await chooseTeam(user, 'Mechanical');
+    await chooseTeam(user, 'Software');
     await user.type(screen.getByLabelText(/What is ballast/), 'Weight, low down.');
     await user.click(screen.getByRole('button', { name: /Add Pathfinding/ }));
     await uploadResume(user);
@@ -322,7 +330,7 @@ describe('submission', () => {
     render(<ApplyForm data={data} submit={submit} />);
 
     await fillIdentity(user);
-    await user.click(screen.getByLabelText('Yes'));
+    await chooseTeam(user, 'Mechanical');
     await user.type(screen.getByLabelText(/What is ballast/), 'Weight, low down.');
     await uploadResume(user);
     await clickReview(user);

@@ -44,12 +44,15 @@ export type ApplyData = {
 /**
  * One team's branch of the form. `rankedSubteams` holds subteam ids, in order.
  *
- * `selected` starts null — undecided — rather than false, so the gate opens
- * with neither radio chosen. Defaulting to No would show every applicant an
- * answer they never gave.
+ * `selected` is a plain boolean. It was once `boolean | null`, to keep "I do not
+ * want to apply" apart from "I have not decided" while each team had its own
+ * yes/no gate — but nothing ever read the difference. Every consumer filters on
+ * it being truthy, and `buildSubmission` sends only chosen teams, so an explicit
+ * No reached the database nowhere. A third state nobody asks about is a third
+ * state that only has room to disagree with the other two.
  */
 export type TeamState = {
-  selected: boolean | null;
+  selected: boolean;
   answers: AnswerMap;
   rankedSubteams: string[];
 };
@@ -118,7 +121,7 @@ export function allQuestions(data: ApplyData): Question[] {
 }
 
 export function emptyTeamState(): TeamState {
-  return { selected: null, answers: {}, rankedSubteams: [] };
+  return { selected: false, answers: {}, rankedSubteams: [] };
 }
 
 export function emptyFormState(data: ApplyData): FormState {

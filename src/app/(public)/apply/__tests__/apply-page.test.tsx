@@ -91,9 +91,7 @@ it('renders the form when a posting is open', async () => {
   expect(screen.getByLabelText(/Full name/)).toBeInTheDocument();
   // The section rail also carries a "Why Sailbot" row; this is the question.
   expect(screen.getByLabelText(/Why Sailbot/, { selector: 'textarea' })).toBeInTheDocument();
-  // The team's own questions stay behind its gate until it is answered Yes.
-  expect(
-    screen.getByRole('group', { name: 'Do you want to apply to the Mechanical team?' }),
-  ).toBeInTheDocument();
+  // The team's own questions stay behind its checkbox until it is ticked.
+  expect(screen.getByRole('checkbox', { name: 'Mechanical' })).toBeInTheDocument();
   expect(screen.queryByLabelText(/What is ballast/)).not.toBeInTheDocument();
 });

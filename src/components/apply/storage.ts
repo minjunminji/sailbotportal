@@ -181,7 +181,10 @@ export function loadDraft(data: ApplyData): FormState | null {
 
     state.teams[posting.slug] = {
       ...emptyTeamState(),
-      selected: team.selected === true ? true : team.selected === false ? false : null,
+      // Anything but an explicit `true` means the team was not chosen. Drafts
+      // written before the gates became checkboxes hold `null` for "undecided",
+      // which reads correctly as unchecked.
+      selected: team.selected === true,
       answers: asAnswerMap(team.answers, fileIds),
       // Subteams can be deactivated between sessions, and `maxChoices` can be
       // lowered; a stale or over-long list would be rejected by the server with

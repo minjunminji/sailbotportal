@@ -19,7 +19,7 @@ import { ReviewSection } from './review-section';
 import { SectionRail } from './section-rail';
 import { formSections } from './sections';
 import { clearDraft, loadDraft, saveDraft } from './storage';
-import { TeamGates } from './team-gates';
+import { TeamSelector } from './team-selector';
 import { TeamQuestions } from './team-questions';
 import { useActiveSection } from './use-active-section';
 import {
@@ -306,7 +306,7 @@ export function ApplyForm({
                 </section>
               ) : null}
 
-              <TeamGates
+              <TeamSelector
                 postings={data.postings}
                 teams={state.teams}
                 errors={fieldErrors}
