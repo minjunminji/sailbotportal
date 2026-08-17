@@ -40,7 +40,12 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pinned, not `latest`. The CLI decides what `supabase status -o env`
+          # emits, so `latest` lets an upstream release change this job's inputs
+          # on a push that touched nothing near it. This is the version
+          # developers run locally; moving it should be a commit someone made on
+          # purpose.
+          version: 2.71.3
 
       - run: npm ci
 
@@ -64,10 +69,36 @@ jobs:
           echo "subteams=$COUNT"
           test "$COUNT" = "12"
 
+      # Every value is checked before it is written. An empty key here does not
+      # fail this step — it fails every integration test at once with
+      # "permission denied for table teams", which reads like a database or RLS
+      # problem and is nothing of the kind. One clear error beats sixty
+      # misleading ones.
       - name: Write test env
         run: |
-          echo "NEXT_PUBLIC_SUPABASE_URL=$(supabase status -o env | grep '^API_URL=' | cut -d= -f2- | tr -d '\"')" >> .env.local
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(supabase status -o env | grep '^ANON_KEY=' | cut -d= -f2- | tr -d '\"')" >> .env.local
-          echo "SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o env | grep '^SERVICE_ROLE_KEY=' | cut -d= -f2- | tr -d '\"')" >> .env.local
+          STATUS=$(supabase status -o env)
+          read_value() { printf '%s\n' "$STATUS" | grep "^$1=" | cut -d= -f2- | tr -d '"'; }
+
+          API_URL=$(read_value API_URL)
+          # Newer CLI releases renamed these to PUBLISHABLE_KEY and SECRET_KEY.
+          # Both spellings are accepted so a pin bump does not silently empty them.
+          ANON=$(read_value ANON_KEY)
+          [ -n "$ANON" ] || ANON=$(read_value PUBLISHABLE_KEY)
+          SERVICE=$(read_value SERVICE_ROLE_KEY)
+          [ -n "$SERVICE" ] || SERVICE=$(read_value SECRET_KEY)
+
+          for pair in "API_URL=$API_URL" "ANON_KEY=$ANON" "SERVICE_ROLE_KEY=$SERVICE"; do
+            if [ -z "${pair#*=}" ]; then
+              echo "::error::${pair%%=*} came back empty from 'supabase status -o env'"
+              printf '%s\n' "$STATUS" | cut -d= -f1
+              exit 1
+            fi
+          done
+
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE"
+          } >> .env.local
 
       - run: npm run test:integration
