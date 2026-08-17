@@ -38,10 +38,15 @@ export function SectionRail({
   return (
     <nav
       aria-label="Application sections"
-      // Sticks within its wrapper, which is the grid item and stretches to the
-      // height of the form beside it — that stretch is what gives the rail
-      // something to travel along.
-      className="sticky top-8 max-h-[calc(100vh-4rem)] overflow-y-auto"
+      // Not sticky itself, though it used to be. The header shares this sticky
+      // block and the two travel as one crown, so the wrapper owns the
+      // stickiness now.
+      //
+      // The scroll cap stays here rather than moving up with it, because the
+      // wrapper has to keep `overflow: visible` for the header's wordmark to
+      // hang over the form column. Subtracting the header (4.5rem) as well as
+      // the sticky offset, so a long list still ends inside the viewport.
+      className="max-h-[calc(100vh-8.5rem)] overflow-y-auto"
     >
       <ul className="flex flex-col gap-1">
         {sections.map((section) => (

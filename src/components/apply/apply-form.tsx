@@ -9,6 +9,7 @@ import type {
 } from '@/app/actions/submit-application';
 import { isQuestionVisible } from '@/lib/questions/schema';
 import type { Answer, AnswerMap, Question } from '@/lib/questions/types';
+import { ApplyHeader } from './apply-header';
 import { Confirmation } from './confirmation';
 import { DraftNotice } from './draft-notice';
 import { ErrorSummary } from './error-summary';
@@ -252,18 +253,47 @@ export function ApplyForm({
 
       <div className="mt-8 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-12">
         {/*
-          Hidden below `lg` rather than reshaped for it. A sticky element
-          competing with an on-screen keyboard and a focused textarea costs a
-          phone more room than the orientation is worth. Also hidden during
-          review, when none of the sections it links to are on the page.
+          The sticky block: the header, and — on a wide enough screen — the
+          rail beneath it. `self-start` is load-bearing, because a grid item
+          stretches to row height by default and a full-height item cannot
+          stick.
+
+          NO `overflow` HERE, and the expanded header is why. It is wider than
+          this 13rem column by design and hangs over the gap; any non-`visible`
+          overflow value clips it at the column edge. Worse, setting only
+          `overflow-y` forces `overflow-x` from `visible` to `auto`, so the
+          clipped wordmark also grows a horizontal scrollbar under the rail.
+          The scroll cap lives on the nav instead, which never overhangs.
+
+          The wrapper itself is always rendered, since the header lives in it
+          and the header is not desktop-only. Below `lg` every sticky utility
+          here is gated off and the grid is a single column, so this becomes an
+          ordinary full-width row holding a header that scrolls away.
         */}
-        <div className="hidden lg:block">
+        <div className="lg:sticky lg:top-8 lg:self-start">
+          <ApplyHeader />
+
+          {/*
+            The rail, unlike the header, is hidden below `lg` rather than
+            reshaped for it: a sticky element competing with an on-screen
+            keyboard and a focused textarea costs a phone more room than the
+            orientation is worth. Also hidden during review, when none of the
+            sections it links to are on the page.
+          */}
           {phase === 'form' ? (
-            <SectionRail sections={sections} activeId={activeId} onNavigate={onNavigate} />
+            <div className="hidden lg:block">
+              <SectionRail sections={sections} activeId={activeId} onNavigate={onNavigate} />
+            </div>
           ) : null}
         </div>
 
-        <div className="min-w-0">
+        {/*
+          Offset by the header's height plus its margin (2.5 + 2 = 4.5rem), so
+          the first section starts level with the first rail row and the
+          expanded wordmark — which is wider than the 13rem column and overhangs
+          this one — hangs over empty space rather than over a field label.
+        */}
+        <div className="min-w-0 lg:mt-18">
           {phase === 'review' ? (
             <div>
               <ReviewSection data={data} state={state} onEdit={() => setPhase('form')} />

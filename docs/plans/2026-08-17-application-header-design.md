@@ -29,7 +29,7 @@ The sticky context moves up one level. Today it is on the `<nav>` in `section-ra
 the rail column's wrapper, which then holds header and nav together:
 
 ```tsx
-<div className="lg:sticky lg:top-8 lg:self-start lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto">
+<div className="lg:sticky lg:top-8 lg:self-start">
   <ApplyHeader />
   {phase === 'form' ? <SectionRail sections={sections} … /> : null}
 </div>
@@ -37,6 +37,17 @@ the rail column's wrapper, which then holds header and nav together:
 
 `self-start` stays load-bearing for the reason the rail design already gives: a grid item stretches
 to row height by default, and a full-height item cannot stick.
+
+**The wrapper carries no `overflow`, and the overhang in §2 is why.** As first built it took the
+rail's old `max-h` and `overflow-y-auto`, which was wrong twice over: a scroll container clips
+horizontally as well as vertically, so it cut the wordmark off at the column edge — and setting
+`overflow-y` alone forces `overflow-x` from `visible` to `auto`, so the clipped wordmark then grew a
+horizontal scrollbar under the rail. The scroll cap lives on the `<nav>` instead, which never
+overhangs. It subtracts the header as well as the sticky offset: `max-h-[calc(100vh-8.5rem)]`.
+
+For the same reason the opaque background and stacking context belong to the header's `<Link>`, not
+its `<h1>`. The heading is a block and stops at the column edge; the link is `inline-flex` and is as
+wide as its content, overhang included.
 
 The wrapper stops being `hidden lg:block` — only `SectionRail` needs hiding now. Below `lg` the grid
 collapses to a single column and this div becomes an ordinary full-width row containing just the
@@ -147,6 +158,10 @@ box is the sail.
 That makes the true aspect 525:765, roughly 0.69 — taller than wide, as a sail should be. It is
 therefore sized `h-10 w-auto` and never `size-10`, which would squash it.
 
+Because the box is now flush to the artwork there is no internal padding to compensate for, so the
+header link's `pl-3` — matching the rail rows' own left padding — is the whole inset needed to line
+the mark's left edge up with the row labels beneath it.
+
 **`fill="currentColor"` on the root**, with the paths' `fill="black"` removed. The app has a `.dark`
 variant in `globals.css`; a hardcoded black mark disappears against `oklch(0.145 0 0)`.
 
@@ -184,7 +199,8 @@ The scroll listener is thin enough that this is its whole surface. There is no e
 rail's `IntersectionObserver` problem here: jsdom has `window.scrollY` and dispatches scroll events
 fine, so the real code under test is the real code.
 
-`apply-page.test.tsx` needs updating — it asserts on the h1 that is moving.
+`apply-page.test.tsx` turned out to need no change: it asserts on the empty-recruiting copy and never
+on the heading that moved.
 
 ---
 

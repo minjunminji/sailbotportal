@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { submitApplication } from '@/app/actions/submit-application';
 import { ApplyForm } from '@/components/apply/apply-form';
+import { ApplyHeader } from '@/components/apply/apply-header';
 import type { ApplyData, ApplyPosting, ApplySubteam } from '@/components/apply/types';
 import { EmptyState } from '@/components/empty-state';
 import { resolveQuestions, type CoreQuestionRow } from '@/lib/questions/snapshot';
@@ -158,11 +159,14 @@ export default async function ApplyPage() {
     // had when it was alone on the page. Essay fields are read at the same line
     // length as before.
     <main className="mx-auto w-full max-w-5xl flex-1 p-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Apply to UBC Sailbot</h1>
-
       {data.postings.length === 0 ? (
+        // The header renders here only on this branch. On the other one it
+        // belongs to the form, which mounts it as the crown of its sticky rail
+        // — so exactly one `<h1>` exists on either path.
         <div className="max-w-3xl">
-          <p className="mt-3 text-base text-muted-foreground">
+          <ApplyHeader />
+
+          <p className="text-base text-muted-foreground">
             One application covers every team that is recruiting.
           </p>
           <div className="mt-8">
