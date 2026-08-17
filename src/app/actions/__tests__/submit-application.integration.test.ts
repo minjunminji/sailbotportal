@@ -245,6 +245,7 @@ function baseInput(email: string, overrides: Partial<SubmissionInput> = {}): Sub
     name: 'Test Applicant',
     email,
     yearOfStudy: '3',
+    faculty: 'Science',
     homeDepartment: 'CPSC',
     resumePath,
     teams: [],
@@ -570,6 +571,7 @@ describe('rejections', () => {
         name: '   ',
         email: 'not-an-email',
         yearOfStudy: '7th',
+        faculty: 'Engineering',
         homeDepartment: '',
         teams: [{ postingSlug: MECH, answers: mechAnswers() }],
       }),
@@ -578,6 +580,7 @@ describe('rejections', () => {
     expect(failed.code).toBe('invalid_input');
     expect(failed.issues.map((i) => i.field).sort()).toEqual([
       'email',
+      'faculty',
       'homeDepartment',
       'name',
       'yearOfStudy',
@@ -764,6 +767,7 @@ describe('the write itself is one transaction', () => {
       applicant_name: 'Race Condition',
       applicant_email: email.toLowerCase(),
       year_of_study: '3',
+      faculty: 'Science',
       home_department: 'CPSC',
       resume_path: resumePath,
       ranked_subteams: [],

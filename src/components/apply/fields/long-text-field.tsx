@@ -21,22 +21,36 @@ export function LongTextField({
   disabled,
 }: FieldProps<LongTextQuestion>) {
   const text = asText(value);
-  const { maxLength, minWords } = question.config;
+  const { maxLength, minWords, maxWords } = question.config;
   const words = countWords(text);
 
   const parts: string[] = [];
   if (minWords !== undefined) parts.push(`${words} of at least ${minWords} words`);
-  if (maxLength !== undefined) parts.push(`${text.length} of ${maxLength} characters`);
+  if (maxWords !== undefined) parts.push(`${words} of ${maxWords} words`);
+  // Only when no word limit is stated. Where a question is expressed in words,
+  // a character count beside it is a second limit to track and the one nobody
+  // was asked to respect.
+  if (maxLength !== undefined && minWords === undefined && maxWords === undefined) {
+    parts.push(`${text.length} of ${maxLength} characters`);
+  }
 
   const short = minWords !== undefined && text !== '' && words < minWords;
-  const long = maxLength !== undefined && text.length > maxLength;
+  const long =
+    (maxLength !== undefined && text.length > maxLength) ||
+    (maxWords !== undefined && words > maxWords);
   const countId = parts.length > 0 ? `${fieldId}-count` : undefined;
+
+  // A ceiling stated in words is a ceiling on how much room the box needs to
+  // offer. Six rows fits a paragraph; a question capped at 30 words wants a
+  // sentence or two, and a box sized for a paragraph past that point just
+  // asks the applicant to scroll inside a scrolling page.
+  const rows = maxWords !== undefined ? Math.min(6, Math.max(2, Math.ceil(maxWords / 10))) : 6;
 
   return (
     <QuestionShell question={question} fieldId={fieldId} error={error}>
       <textarea
         id={inputId(fieldId)}
-        rows={6}
+        rows={rows}
         value={text}
         disabled={disabled}
         aria-required={question.required || undefined}

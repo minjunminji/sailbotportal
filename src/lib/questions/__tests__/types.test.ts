@@ -82,9 +82,9 @@ const file: FileQuestion = {
 };
 
 describe('question type union', () => {
-  it('lists all eight types exactly once', () => {
-    expect(QUESTION_TYPES).toHaveLength(8);
-    expect(new Set(QUESTION_TYPES).size).toBe(8);
+  it('lists all nine types exactly once', () => {
+    expect(QUESTION_TYPES).toHaveLength(9);
+    expect(new Set(QUESTION_TYPES).size).toBe(9);
     expect([...QUESTION_TYPES].sort()).toEqual(
       [
         'file',
@@ -95,6 +95,7 @@ describe('question type union', () => {
         'scale',
         'select',
         'short_text',
+        'skills',
       ].sort(),
     );
   });
@@ -159,7 +160,7 @@ describe('type guards narrow the config', () => {
 });
 
 describe('exhaustiveness', () => {
-  /** A switch that handles all eight compiles; the default branch is unreachable. */
+  /** A switch that handles all nine compiles; the default branch is unreachable. */
   function describeConfig(question: Question): string {
     switch (question.type) {
       case 'short_text':
@@ -174,6 +175,8 @@ describe('exhaustiveness', () => {
         return `scale:${question.config.max}`;
       case 'matrix':
         return `matrix:${question.config.mode}`;
+      case 'skills':
+        return `skills:${question.config.skills.length}`;
       case 'ranking':
         return `ranking:${question.config.maxChoices}`;
       case 'file':
@@ -254,7 +257,7 @@ describe('invalid shapes do not compile', () => {
 
     const notAType: Question = {
       id: 'd',
-      // @ts-expect-error 'wordle' is not one of the eight types
+      // @ts-expect-error 'wordle' is not one of the nine types
       type: 'wordle',
       label: 'D',
       required: true,

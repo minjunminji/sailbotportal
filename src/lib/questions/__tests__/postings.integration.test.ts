@@ -5,7 +5,7 @@ import { POSTING_STATUS_VALUES } from '@/lib/postings/statuses';
 import { adminClient } from '@/test/supabase-helpers';
 import { resolveQuestions } from '../snapshot';
 import { validateQuestion, validateQuestions } from '../validate';
-import { isFile, isMatrix, isShortText, type Question } from '../types';
+import { isFile, isShortText, isSkills, type Question } from '../types';
 
 /**
  * The seeded 2025 question sets, checked against the database they were written
@@ -99,13 +99,21 @@ describe('the three real postings exist', () => {
     }
   });
 
-  it('each carries a description taken from its posting document', () => {
+  it('each opens with a paragraph about its own team, not about the project', () => {
     for (const slug of REAL_POSTING_SLUGS) {
       expect(posting(slug).description.length).toBeGreaterThan(100);
     }
+
+    // The first paragraph is the card face in the team selector, and all three
+    // used to open with the same account of the project rewritten. What each
+    // one says first has to be the thing that tells it apart from the others.
+    const opening = (slug: RealSlug) => posting(slug).description.split('\n\n')[0];
+    expect(opening('mech-2026')).toContain('mechanical team');
+    expect(opening('elec-2026')).toContain('electrical team');
+    expect(opening('soft-2026')).toContain('software team');
+
+    // The project is still described, once, further down Mechanical's.
     expect(posting('mech-2026').description).toContain('POLARIS');
-    expect(posting('elec-2026').description).toContain('electrical team');
-    expect(posting('soft-2026').description).toContain('autonomous research vessel');
   });
 });
 
@@ -148,8 +156,15 @@ describe('every seeded question is well-formed', () => {
 });
 
 describe('subteam ranking is on for software only', () => {
-  it('software ranks its top three subteams', () => {
-    expect(posting('soft-2026').subteam_ranking).toEqual({ enabled: true, maxChoices: 3 });
+  it('software asks for exactly two subteams', () => {
+    // Floor and ceiling both 2. The floor is what makes the rail's count of the
+    // ranking true; before it existed, an application could be sent having
+    // ranked nothing while the rail insisted it was one item short.
+    expect(posting('soft-2026').subteam_ranking).toEqual({
+      enabled: true,
+      minChoices: 2,
+      maxChoices: 2,
+    });
   });
 
   it.each(['mech-2026', 'elec-2026'] as const)('%s does not rank subteams', (slug) => {
@@ -248,8 +263,11 @@ describe('electrical', () => {
 });
 
 describe('software', () => {
-  it('asks the seven 2025 questions in order', () => {
+  it('asks the 2025 questions in order, behind the first-choice reason', () => {
+    // `first_choice_reason` is not from the 2025 form. It sits first so it
+    // renders directly beneath the subteam ranking it refers to.
     expect(questionsOf('soft-2026').map((q) => q.id)).toEqual([
+      'first_choice_reason',
       'saturday_availability',
       'technical_skills',
       'software_project',
@@ -260,22 +278,20 @@ describe('software', () => {
     ]);
   });
 
-  it('has a 20-row, 2-column multi-select skills matrix', () => {
+  it('rates fifteen skills on a five-point scale', () => {
     const question = questionsOf('soft-2026').find((q) => q.id === 'technical_skills');
     expect(question).toBeDefined();
-    expect(isMatrix(question!)).toBe(true);
-    if (!isMatrix(question!)) throw new Error('expected a matrix');
+    expect(isSkills(question!)).toBe(true);
+    if (!isSkills(question!)) throw new Error('expected a skills question');
 
-    expect(question.config.rows).toHaveLength(20);
-    expect(question.config.columns).toHaveLength(2);
-    expect(question.config.mode).toBe('multi');
-    expect(question.config.columns).toEqual([
-      'I have this skill',
-      'I want to learn/improve this skill',
-    ]);
+    expect(question.config.skills).toHaveLength(15);
+    expect(question.config.maxLevel).toBe(5);
+    // The bottom of the scale is the slider's resting position, so it has to
+    // say "nothing here" rather than read as a claim of level 1.
+    expect(question.config.minLabel).toBe('No experience');
     // The two ends of the list, so a truncated or reordered transcription shows.
-    expect(question.config.rows[0]).toBe('Python');
-    expect(question.config.rows[19]).toBe('Sailing');
+    expect(question.config.skills[0]).toBe('Python');
+    expect(question.config.skills[14]).toBe('Sailing');
     expect(question.required).toBe(false);
   });
 

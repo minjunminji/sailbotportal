@@ -58,6 +58,9 @@ export type SubmissionInput = {
   email: string;
   /** Ordinal: '1'..'5', 'masters', 'phd'. */
   yearOfStudy: string;
+  /** One of `FACULTIES`. */
+  faculty: string;
+  /** Program or major: an APSC code under Applied Science, free text otherwise. */
   homeDepartment: string;
   /** Storage path returned by /api/upload?purpose=resume. Shared by every row. */
   resumePath?: string | null;
@@ -141,6 +144,17 @@ const limiter = new RateLimiter(5, 10 * 60 * 1000);
 const YEARS_OF_STUDY = ['1', '2', '3', '4', '5', 'masters', 'phd'] as const;
 
 /**
+ * The faculties `applications.faculty` is documented to hold.
+ *
+ * Restated here rather than imported from the form's `FACULTY_OPTIONS`: this
+ * module is `'use server'`, so everything it exports becomes a public endpoint,
+ * and importing a client component's module into it to share one array would
+ * pull the form's dependency graph onto the server for no gain. The list is
+ * short, fixed, and the same restatement `YEARS_OF_STUDY` already makes.
+ */
+const FACULTIES = ['Applied Science', 'Science', 'Arts', 'Business', 'Law', 'Forestry'] as const;
+
+/**
  * Storage paths this app issues, and nothing else.
  *
  * `randomStoragePath` produces `<prefix>/<uuid>.<ext>`, so anything that does
@@ -173,7 +187,13 @@ const submissionSchema = z.object({
   name: z.string().trim().min(1, 'Enter your name').max(120),
   email: emailField,
   yearOfStudy: z.enum(YEARS_OF_STUDY, 'Choose your year of study'),
-  homeDepartment: z.string().trim().min(1, 'Enter your home department').max(80),
+  faculty: z.enum(FACULTIES, 'Choose your faculty'),
+  // Not checked against the Applied Science code list even when the faculty is
+  // Applied Science. The form offers those codes because consistent codes are
+  // what the export groups on, but a program list changes between calendars and
+  // an applicant refused for studying something real is a worse failure than a
+  // row that needs tidying.
+  homeDepartment: z.string().trim().min(1, 'Enter your program or major').max(80),
   resumePath: z.string().trim().min(1).nullish(),
   teams: z.array(teamSelectionSchema).max(20).default([]),
   honeypot: z.string().nullish(),
@@ -191,6 +211,9 @@ type PostingRow = {
 
 const subteamRankingSchema = z.object({
   enabled: z.boolean().default(false),
+  // Defaults to 0 so a posting written before the floor existed keeps behaving
+  // as it did: a ceiling and no requirement to reach it.
+  minChoices: z.number().int().nonnegative().default(0),
   maxChoices: z.number().int().positive().default(3),
 });
 
@@ -380,6 +403,20 @@ export async function submitApplication(input: SubmissionInput): Promise<SubmitR
       continue;
     }
 
+    // The floor. Checked against the posting's own config rather than trusting
+    // the form to have done it, for the same reason as every other rule here.
+    if (ranked.length < ranking.data.minChoices) {
+      subteamIssues.push({
+        posting: posting.slug,
+        field: 'rankedSubteams',
+        message:
+          ranking.data.minChoices === 1
+            ? 'Choose your top subteam'
+            : `Choose your top ${ranking.data.minChoices} subteams`,
+      });
+      continue;
+    }
+
     // Membership is checked against the POSTING'S team. A software applicant
     // ranking a mechanical subteam would otherwise land a row whose
     // `assigned_subteam_id` could never be filled from its own list.
@@ -563,6 +600,7 @@ export async function submitApplication(input: SubmissionInput): Promise<SubmitR
     applicant_name: submission.name,
     applicant_email: submission.email,
     year_of_study: submission.yearOfStudy,
+    faculty: submission.faculty,
     home_department: submission.homeDepartment,
     resume_path: resumePath,
     ranked_subteams: entry.rankedSubteams,

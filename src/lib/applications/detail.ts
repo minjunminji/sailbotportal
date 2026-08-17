@@ -50,6 +50,7 @@ export type ApplicationDetail = {
   applicantName: string;
   applicantEmail: string;
   yearOfStudy: string;
+  faculty: string;
   homeDepartment: string;
   resumePath: string | null;
   status: ApplicationStatus;
@@ -79,6 +80,7 @@ type DetailRow = {
   applicant_name: string;
   applicant_email: string;
   year_of_study: string;
+  faculty: string;
   home_department: string;
   resume_path: string | null;
   ranked_subteams: string[] | null;
@@ -99,7 +101,7 @@ export async function getApplicationDetail(
     .from('applications')
     .select(
       'id, posting_id, submission_id, applicant_name, applicant_email, year_of_study, ' +
-        'home_department, resume_path, ranked_subteams, answers, question_schema_snapshot, ' +
+        'faculty, home_department, resume_path, ranked_subteams, answers, question_schema_snapshot, ' +
         // `question_schema` is deliberately NOT selected. The questions come from
         // `question_schema_snapshot` above; not fetching the live column means the
         // "simplification" that would break this cannot be made by accident.
@@ -135,6 +137,7 @@ export async function getApplicationDetail(
     applicantName: row.applicant_name,
     applicantEmail: row.applicant_email,
     yearOfStudy: row.year_of_study,
+    faculty: row.faculty,
     homeDepartment: row.home_department,
     resumePath: row.resume_path,
     status: row.status as ApplicationStatus,

@@ -81,6 +81,23 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /*
+   * Tailwind's preflight sets every button to `cursor: default`, on the
+   * reasoning that a native OS button does not change the pointer. On the web
+   * it does, and people read the hand as "this is a control" — without it a
+   * borderless button like the notice's dismiss X is indistinguishable from
+   * decoration until it is clicked.
+   *
+   * Disabled controls are left alone: keeping the arrow there is the point.
+   *
+   * In `@layer base`, so any single button that genuinely wants a different
+   * cursor can still say so with a utility class.
+   */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
 }
 
 /**
@@ -127,4 +144,15 @@
 .pdf-text-layer .highlight {
   background: color-mix(in oklab, var(--ring) 35%, transparent);
   border-radius: 2px;
+}
+
+/*
+ * Rail links scroll rather than jump — but only for people who have not asked
+ * the system for less motion. Smooth scrolling across a form this long is a
+ * long slide, and it is a common migraine and vestibular trigger.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }

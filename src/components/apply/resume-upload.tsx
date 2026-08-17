@@ -16,6 +16,11 @@ import { UploadFailed, uploadFile } from './upload';
  * interview. The failure message names the team inboxes for the same reason the
  * 2025 form did, because someone whose upload will not go through needs
  * somewhere to go that is not this page.
+ *
+ * Rendered inside `IdentitySection`'s "About you" section rather than under a
+ * heading of its own: it is one more fact about the applicant, asked before
+ * anything team-specific, and a whole section for one file input gave it more
+ * ceremony than a single upload button needs.
  */
 export function ResumeUpload({
   resume,
@@ -38,6 +43,14 @@ export function ResumeUpload({
   const statusId = `${fieldId}-status`;
   const errorId = `${fieldId}-error`;
 
+  // Nothing to say before a file exists — 'No file uploaded yet' told the
+  // applicant only what the empty control beside it already showed.
+  const status = uploading
+    ? 'Uploading…'
+    : resume
+      ? `Uploaded ${resume.filename} (${formatBytes(resume.size)})`
+      : null;
+
   async function handleFile(file: File | undefined) {
     if (!file) return;
     setFailure(null);
@@ -56,70 +69,61 @@ export function ResumeUpload({
   }
 
   return (
-    <section id={fieldId} aria-labelledby="resume-heading">
-      <h2 id="resume-heading" className="text-lg font-semibold">
-        Your resume
-      </h2>
+    <div id={fieldId}>
+      <label htmlFor={inputId} className="block text-base font-medium">
+        Resume
+      </label>
+      <input
+        id={inputId}
+        ref={input}
+        type="file"
+        accept="application/pdf,.pdf"
+        disabled={disabled || uploading}
+        required
+        aria-invalid={error ? true : undefined}
+        aria-describedby={[helpId, status ? statusId : null, error ? errorId : null]
+          .filter(Boolean)
+          .join(' ')}
+        onChange={(event) => void handleFile(event.target.files?.[0])}
+        className={`mt-3 ${controlClasses}`}
+      />
+
       <p id={helpId} className="mt-2 text-sm text-muted-foreground">
-        PDF only, up to 5 MB. The same file goes to every team you apply to.
+        PDF only, up to 5 MB.
       </p>
 
-      <div className="mt-6">
-        <label htmlFor={inputId} className="block text-base font-medium">
-          Resume
-          <span aria-hidden="true" className="ml-1 text-destructive">
-            *
-          </span>
-          <span className="sr-only"> (required)</span>
-        </label>
-        <input
-          id={inputId}
-          ref={input}
-          type="file"
-          accept="application/pdf,.pdf"
-          disabled={disabled || uploading}
-          required
-          aria-invalid={error ? true : undefined}
-          aria-describedby={[helpId, statusId, error ? errorId : null].filter(Boolean).join(' ')}
-          onChange={(event) => void handleFile(event.target.files?.[0])}
-          className={`mt-3 ${controlClasses}`}
-        />
-
+      {status ? (
         <p id={statusId} aria-live="polite" className="mt-2 text-sm text-muted-foreground">
-          {uploading
-            ? 'Uploading…'
-            : resume
-              ? `Uploaded ${resume.filename} (${formatBytes(resume.size)})`
-              : 'No file uploaded yet.'}
+          {status}
         </p>
+      ) : null}
 
-        {failure ? (
-          <p className="mt-2 text-sm text-destructive">
-            {failure} If this keeps happening, email mech@ubcsailbot.org, electrical@ubcsailbot.org,
-            or software@ubcsailbot.org.
-          </p>
-        ) : null}
+      {failure ? (
+        <p className="mt-2 text-sm text-destructive">
+          {failure} If this keeps happening, email mech@ubcsailbot.org, electrical@ubcsailbot.org,
+          or software@ubcsailbot.org.
+        </p>
+      ) : null}
 
-        {error ? (
-          <p id={errorId} className="mt-2 text-sm text-destructive">
-            {error}
-          </p>
-        ) : null}
+      {error ? (
+        <p id={errorId} className="mt-2 text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
 
-        {resume ? (
-          <button
-            type="button"
-            disabled={disabled || uploading}
-            onClick={() => {
-              setFailure(null);
-              onChange(null);
-            }}
-            className={`mt-3 ${smallButtonClasses}`}
-          >
-            Remove resume
-          </button>
-        ) : null}
-      </div>
-    </section>
+      {resume ? (
+        <button
+          type="button"
+          disabled={disabled || uploading}
+          onClick={() => {
+            setFailure(null);
+            onChange(null);
+          }}
+          className={`mt-3 ${smallButtonClasses}`}
+        >
+          Remove resume
+        </button>
+      ) : null}
+    </div>
   );
 }

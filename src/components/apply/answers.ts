@@ -1,4 +1,4 @@
-import type { Answer, FileAnswer, MatrixAnswer } from '@/lib/questions/types';
+import type { Answer, FileAnswer, MatrixAnswer, SkillsAnswer } from '@/lib/questions/types';
 
 /**
  * Readers that turn a stored answer into the shape one field component expects.
@@ -34,6 +34,26 @@ export function asMatrixAnswer(value: Answer | undefined): MatrixAnswer {
   for (const [row, selected] of Object.entries(value as Record<string, unknown>)) {
     if (!Array.isArray(selected)) continue;
     out[row] = selected.filter((entry): entry is string => typeof entry === 'string');
+  }
+  return out;
+}
+
+/**
+ * A restored draft or a stored answer, coerced into something renderable.
+ *
+ * Entries missing either half are dropped rather than half-filled: a level with
+ * no flag, or a flag with no level, is a shape this form never produced.
+ */
+export function asSkillsAnswer(value: Answer | undefined): SkillsAnswer {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
+
+  const out: SkillsAnswer = {};
+  for (const [skill, entry] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) continue;
+    const { level, wantsToLearn } = entry as { level?: unknown; wantsToLearn?: unknown };
+    if (typeof level !== 'number' || !Number.isInteger(level)) continue;
+    if (typeof wantsToLearn !== 'boolean') continue;
+    out[skill] = { level, wantsToLearn };
   }
   return out;
 }

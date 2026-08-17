@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ApplicationDetail as Detail } from '@/lib/applications/detail';
 import type { ApplicationNavigation } from '@/lib/applications/navigation';
+import { resolveLabel } from '@/lib/questions/labels';
 import { BOARD_COLUMNS } from '@/components/board/columns';
 import { shortYearLabel } from '@/components/board/columns';
 import { NotesPanel } from '@/components/notes/notes-panel';
@@ -75,7 +76,13 @@ export function ApplicationDetailView({
           </div>
 
           <div className="flex gap-2">
-            <dt className="text-muted-foreground">Department</dt>
+            <dt className="text-muted-foreground">Faculty</dt>
+            {/* Empty only on a row written before the column existed. */}
+            <dd>{detail.faculty || '—'}</dd>
+          </div>
+
+          <div className="flex gap-2">
+            <dt className="text-muted-foreground">Program</dt>
             <dd>{detail.homeDepartment}</dd>
           </div>
 
@@ -186,6 +193,9 @@ function ApplicantArrow({
 }
 
 function Answers({ detail }: { detail: Detail }) {
+  const first = detail.rankedSubteams[0];
+  const firstChoice = first ? first.code || first.name : null;
+
   if (detail.questions.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -203,7 +213,15 @@ function Answers({ detail }: { detail: Detail }) {
       {detail.questions.map((entry, index) =>
         entry.ok ? (
           <div key={entry.question.id}>
-            <dt className="text-sm font-medium text-muted-foreground">{entry.question.label}</dt>
+            {/*
+              Resolved against this applicant's own ranking. The snapshot stores
+              the placeholder, so without this a lead would read the template —
+              "why is {firstSubteam} your first choice?" — instead of the
+              question the applicant answered.
+            */}
+            <dt className="text-sm font-medium text-muted-foreground">
+              {resolveLabel(entry.question.label, firstChoice)}
+            </dt>
             <dd className="mt-1">
               <AnswerView question={entry.question} answer={detail.answers[entry.question.id]} />
             </dd>

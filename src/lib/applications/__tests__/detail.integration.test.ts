@@ -201,6 +201,7 @@ beforeAll(async () => {
         applicant_name: 'Devon Marsh',
         applicant_email: 'devon_marsh@detailtest.dev',
         year_of_study: '3',
+        faculty: 'Science',
         home_department: 'CPSC',
         resume_path: 'resumes/devon.pdf',
         // Second choice first on purpose: the order IS the answer.
@@ -215,6 +216,7 @@ beforeAll(async () => {
         applicant_name: 'Devon Marsh',
         applicant_email: 'devon_marsh@detailtest.dev',
         year_of_study: '3',
+        faculty: 'Science',
         home_department: 'CPSC',
         resume_path: 'resumes/devon.pdf',
         ranked_subteams: [],

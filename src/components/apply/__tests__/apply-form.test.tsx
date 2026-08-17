@@ -65,13 +65,30 @@ async function fillIdentity(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/Full name/), 'Sam Rivers');
   await user.type(screen.getByLabelText(/^Email/), 'sam@student.ubc.ca');
   await user.selectOptions(screen.getByLabelText(/Year of study/), '2');
-  await user.type(screen.getByLabelText(/Home department/), 'MECH — Mechanical Engineering');
+  await user.selectOptions(screen.getByLabelText(/Faculty/), 'Applied Science');
+  // Applied Science asks for a program code from a list; every other faculty
+  // takes free text, which is covered in its own test below.
+  await user.selectOptions(screen.getByLabelText(/Program or major/), 'MECH');
   await user.type(screen.getByLabelText(/Why do you want to join/), 'Boats.');
+}
+
+/**
+ * Teams are chosen from one checkbox list, one box per team, named by the team.
+ * This used to be a yes/no radio pair per team, so most of these tests clicked
+ * an ambiguous "Yes".
+ */
+async function chooseTeam(user: ReturnType<typeof userEvent.setup>, teamName: string) {
+  await user.click(screen.getByRole('checkbox', { name: teamName }));
+}
+
+/** Review is offered once, at the end of the form. `getBy` asserts that. */
+async function clickReview(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'Review your application' }));
 }
 
 async function uploadResume(user: ReturnType<typeof userEvent.setup>) {
   await user.upload(
-    screen.getByLabelText(/^Resume/),
+    screen.getByLabelText(/^Resume/, { selector: 'input' }),
     new File(['%PDF-'], 'cv.pdf', { type: 'application/pdf' }),
   );
   await screen.findByText(/Uploaded cv.pdf/);
@@ -84,7 +101,7 @@ describe('conditional questions', () => {
     const user = userEvent.setup();
     render(<ApplyForm data={data} submit={succeeds()} />);
 
-    await user.click(screen.getByLabelText('Yes'));
+    await chooseTeam(user, 'Software');
 
     // Nothing ranked: the rule cannot be satisfied, and neither side shows it.
     expect(isQuestionVisible(pathOnlyQuestion, [])).toBe(false);
@@ -95,11 +112,12 @@ describe('conditional questions', () => {
     expect(isQuestionVisible(pathOnlyQuestion, ['pathfinding'])).toBe(true);
     expect(screen.getByLabelText(/What is a heuristic/)).toBeInTheDocument();
 
-    // Pushed to third place, it is outside the top two again.
+    // Dropped and re-picked last, it is outside the top two again. That is the
+    // whole of reordering now the move buttons are gone.
+    await user.click(screen.getByRole('button', { name: /Remove Pathfinding/ }));
     await user.click(screen.getByRole('button', { name: /Add Network Systems/ }));
     await user.click(screen.getByRole('button', { name: /Add Boat Simulator/ }));
-    await user.click(screen.getByRole('button', { name: /Move down Pathfinding/ }));
-    await user.click(screen.getByRole('button', { name: /Move down Pathfinding/ }));
+    await user.click(screen.getByRole('button', { name: /Add Pathfinding/ }));
 
     expect(
       isQuestionVisible(pathOnlyQuestion, ['network-systems', 'boat-simulator', 'pathfinding']),
@@ -110,15 +128,59 @@ describe('conditional questions', () => {
   it('puts the ranking above the questions it decides', async () => {
     const user = userEvent.setup();
     render(<ApplyForm data={data} submit={succeeds()} />);
-    await user.click(screen.getByLabelText('Yes'));
+    await chooseTeam(user, 'Software');
     await user.click(screen.getByRole('button', { name: /Add Pathfinding/ }));
 
-    const ranking = screen.getByRole('group', { name: /subteams are you most interested in/ });
+    const ranking = screen.getByRole('group', { name: /subteams you're interested in/ });
     const question = screen.getByLabelText(/What is a heuristic/);
 
     expect(ranking.compareDocumentPosition(question) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
+  });
+});
+
+describe('faculty and program', () => {
+  const data = applyData([mechanicalPosting()]);
+
+  it('asks for a program code under Applied Science and free text elsewhere', async () => {
+    const user = userEvent.setup();
+    render(<ApplyForm data={data} submit={succeeds()} />);
+
+    // Nothing chosen yet: the box takes whatever the applicant studies, because
+    // there is no list to offer until a faculty says which one.
+    expect(screen.getByLabelText(/Program or major/).tagName).toBe('INPUT');
+
+    await user.selectOptions(screen.getByLabelText(/Faculty/), 'Applied Science');
+    const program = screen.getByLabelText(/Program or major/);
+    expect(program.tagName).toBe('SELECT');
+    expect(screen.getByRole('option', { name: /MECH/ })).toBeInTheDocument();
+
+    await user.selectOptions(program, 'MECH');
+    // The CODE alone is what is stored, not the label the applicant read.
+    expect(program).toHaveValue('MECH');
+
+    await user.selectOptions(screen.getByLabelText(/Faculty/), 'Science');
+    expect(screen.getByLabelText(/Program or major/).tagName).toBe('INPUT');
+  });
+
+  it('drops a program that the new faculty cannot express, and keeps one it can', async () => {
+    const user = userEvent.setup();
+    render(<ApplyForm data={data} submit={succeeds()} />);
+
+    await user.selectOptions(screen.getByLabelText(/Faculty/), 'Applied Science');
+    await user.selectOptions(screen.getByLabelText(/Program or major/), 'MECH');
+
+    // 'MECH' means nothing in Arts, and the field it was chosen in no longer
+    // exists, so leaving it would submit an engineering code under Arts.
+    await user.selectOptions(screen.getByLabelText(/Faculty/), 'Arts');
+    expect(screen.getByLabelText(/Program or major/)).toHaveValue('');
+
+    // Between two free-text faculties there is nothing to reconcile: someone
+    // correcting Arts to Science has not changed what they study.
+    await user.type(screen.getByLabelText(/Program or major/), 'Philosophy');
+    await user.selectOptions(screen.getByLabelText(/Faculty/), 'Science');
+    expect(screen.getByLabelText(/Program or major/)).toHaveValue('Philosophy');
   });
 });
 
@@ -130,7 +192,7 @@ describe('draft autosave', () => {
     const first = render(<ApplyForm data={data} submit={succeeds()} />);
 
     await user.type(screen.getByLabelText(/Full name/), 'Sam Rivers');
-    await user.click(screen.getByLabelText('Yes'));
+    await chooseTeam(user, 'Mechanical');
     await user.type(screen.getByLabelText(/What is ballast/), 'Weight, low down.');
 
     await waitFor(() => expect(window.localStorage.getItem(DRAFT_KEY)).toContain('Sam Rivers'));
@@ -149,7 +211,7 @@ describe('draft autosave', () => {
     const first = render(<ApplyForm data={fileData} submit={succeeds()} />);
 
     await user.type(screen.getByLabelText(/Full name/), 'Sam Rivers');
-    await user.click(screen.getByLabelText('Yes'));
+    await chooseTeam(user, 'Software');
     await user.upload(
       screen.getByLabelText(/Upload your technical quiz/),
       new File(['PK'], 'quiz.zip', { type: 'application/zip' }),
@@ -168,8 +230,8 @@ describe('draft autosave', () => {
     render(<ApplyForm data={fileData} submit={succeeds()} />);
 
     expect(screen.getByLabelText(/Full name/)).toHaveValue('Sam Rivers');
-    expect(screen.getByText('No file uploaded yet.')).toBeInTheDocument();
-    expect(screen.queryByText(/Uploaded quiz.zip/)).not.toBeInTheDocument();
+    // Neither file survived the remount: nothing names either upload on screen.
+    expect(screen.queryByText(/Uploaded/)).not.toBeInTheDocument();
   });
 
   it('is cleared when the application is sent', async () => {
@@ -177,11 +239,11 @@ describe('draft autosave', () => {
     render(<ApplyForm data={data} submit={succeeds()} />);
 
     await fillIdentity(user);
-    await user.click(screen.getByLabelText('Yes'));
+    await chooseTeam(user, 'Mechanical');
     await user.type(screen.getByLabelText(/What is ballast/), 'Weight, low down.');
     await uploadResume(user);
 
-    await user.click(screen.getByRole('button', { name: 'Review your application' }));
+    await clickReview(user);
     await user.click(screen.getByRole('button', { name: 'Submit application' }));
 
     await screen.findByRole('heading', { name: 'Your application is in' });
@@ -196,7 +258,7 @@ describe('errors', () => {
     const user = userEvent.setup();
     render(<ApplyForm data={data} submit={succeeds()} />);
 
-    await user.click(screen.getByRole('button', { name: 'Review your application' }));
+    await clickReview(user);
 
     const summary = screen.getByRole('alert');
     expect(summary).toHaveTextContent('Full name: Enter your name');
@@ -208,7 +270,7 @@ describe('errors', () => {
     const user = userEvent.setup();
     render(<ApplyForm data={data} submit={succeeds()} />);
 
-    await user.click(screen.getByRole('button', { name: 'Review your application' }));
+    await clickReview(user);
 
     expect(screen.getByRole('link', { name: /Full name: Enter your name/ })).toHaveAttribute(
       'href',
@@ -221,9 +283,9 @@ describe('errors', () => {
     render(<ApplyForm data={data} submit={succeeds()} />);
 
     await fillIdentity(user);
-    await user.click(screen.getByLabelText('Yes'));
+    await chooseTeam(user, 'Mechanical');
     await uploadResume(user);
-    await user.click(screen.getByRole('button', { name: 'Review your application' }));
+    await clickReview(user);
 
     expect(screen.getByRole('alert')).toHaveTextContent(
       'What is ballast?: This question is required',
@@ -250,10 +312,10 @@ describe('errors', () => {
     render(<ApplyForm data={data} submit={submit} />);
 
     await fillIdentity(user);
-    await user.click(screen.getByLabelText('Yes'));
+    await chooseTeam(user, 'Mechanical');
     await user.type(screen.getByLabelText(/What is ballast/), 'Weight, low down.');
     await uploadResume(user);
-    await user.click(screen.getByRole('button', { name: 'Review your application' }));
+    await clickReview(user);
     await user.click(screen.getByRole('button', { name: 'Submit application' }));
 
     const summary = await screen.findByRole('alert');
@@ -280,14 +342,13 @@ describe('submission', () => {
     render(<ApplyForm data={data} submit={submit} />);
 
     await fillIdentity(user);
-    const [mechGate, softGate] = screen.getAllByLabelText('Yes');
-    await user.click(mechGate);
-    await user.click(softGate);
+    await chooseTeam(user, 'Mechanical');
+    await chooseTeam(user, 'Software');
     await user.type(screen.getByLabelText(/What is ballast/), 'Weight, low down.');
     await user.click(screen.getByRole('button', { name: /Add Pathfinding/ }));
     await uploadResume(user);
 
-    await user.click(screen.getByRole('button', { name: 'Review your application' }));
+    await clickReview(user);
     await user.click(screen.getByRole('button', { name: 'Submit application' }));
 
     await screen.findByRole('heading', { name: 'Your application is in' });
@@ -317,14 +378,14 @@ describe('submission', () => {
     render(<ApplyForm data={data} submit={submit} />);
 
     await fillIdentity(user);
-    await user.click(screen.getByLabelText('Yes'));
+    await chooseTeam(user, 'Mechanical');
     await user.type(screen.getByLabelText(/What is ballast/), 'Weight, low down.');
     await uploadResume(user);
-    await user.click(screen.getByRole('button', { name: 'Review your application' }));
+    await clickReview(user);
 
     expect(screen.getByRole('heading', { name: 'Review your application' })).toBeInTheDocument();
     expect(screen.getByText('Weight, low down.')).toBeInTheDocument();
-    expect(screen.getByText('Second year')).toBeInTheDocument();
+    expect(screen.getByText('2nd')).toBeInTheDocument();
     expect(screen.getByText('cv.pdf')).toBeInTheDocument();
     expect(submit).not.toHaveBeenCalled();
   });

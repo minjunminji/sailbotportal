@@ -3,6 +3,7 @@ import {
   type Answer,
   type FileAnswer,
   type MatrixAnswer,
+  type SkillsAnswer,
   type Question,
 } from '@/lib/questions/types';
 
@@ -16,7 +17,7 @@ import {
  * read-only mode, which would carry every one of those assumptions along.
  *
  * The `switch` is exhaustive: `assertNeverQuestion` stops this compiling if a
- * ninth question type joins the union, so a new type cannot ship rendering as
+ * tenth question type joins the union, so a new type cannot ship rendering as
  * nothing.
  */
 
@@ -111,6 +112,17 @@ export function AnswerView({
     case 'matrix':
       return <MatrixView answer={answer as MatrixAnswer} rows={question.config.rows} />;
 
+    case 'skills':
+      return (
+        <SkillsView
+          answer={answer as SkillsAnswer}
+          skills={question.config.skills}
+          maxLevel={question.config.maxLevel}
+          minLabel={question.config.minLabel}
+          maxLabel={question.config.maxLabel}
+        />
+      );
+
     case 'ranking':
       // An ordered list numbers itself, so the applicant's order is carried by
       // the markup rather than by text a screen reader has to infer.
@@ -140,13 +152,64 @@ export function AnswerView({
 }
 
 /**
- * The skills grid, as rows that were actually ticked.
+ * Skills the applicant said anything about, in the question's own order.
  *
- * The form renders this as a 20×2 grid of checkboxes. Reproducing that here
- * would give a lead twenty rows to scan of which perhaps six carry anything;
- * listing only the rows with a selection says the same thing in a sixth of the
- * space, which is what makes it readable on a page holding twenty other
- * questions.
+ * Skills they left alone are absent from the answer entirely, so this shows
+ * only what was claimed — a lead scanning forty applications wants the four
+ * rows someone filled in, not fifteen rows of "no experience".
+ *
+ * The level prints as a fraction rather than as the scale's own wording,
+ * because "3" beside "of 5" is comparable across applications at a glance where
+ * a word is not. The named ends are still spelled out, since they are what the
+ * applicant was actually reading when they answered.
+ */
+function SkillsView({
+  answer,
+  skills,
+  maxLevel,
+  minLabel,
+  maxLabel,
+}: {
+  answer: SkillsAnswer;
+  skills: string[];
+  maxLevel: number;
+  minLabel: string;
+  maxLabel: string;
+}) {
+  const rated = skills
+    .map((skill) => ({ skill, entry: answer[skill] }))
+    .filter(
+      (row): row is { skill: string; entry: SkillsAnswer[string] } => row.entry !== undefined,
+    );
+
+  if (rated.length === 0) return <Unanswered />;
+
+  return (
+    <dl className="flex flex-col gap-1">
+      {rated.map(({ skill, entry }) => {
+        const named = entry.level <= 1 ? minLabel : entry.level >= maxLevel ? maxLabel : null;
+        return (
+          <div key={skill} className="flex flex-wrap items-baseline gap-x-2">
+            <dt className="text-base">{skill}</dt>
+            <dd className="text-sm text-muted-foreground">
+              {entry.level} of {maxLevel}
+              {named ? ` · ${named}` : ''}
+              {entry.wantsToLearn ? ' · wants to learn/improve' : ''}
+            </dd>
+          </div>
+        );
+      })}
+    </dl>
+  );
+}
+
+/**
+ * A matrix, as the rows that were actually ticked.
+ *
+ * Reproducing the form's full grid would give a lead every row to scan of which
+ * perhaps a quarter carry anything; listing only the rows with a selection says
+ * the same thing in a fraction of the space, which is what makes it readable on
+ * a page holding twenty other questions.
  */
 function MatrixView({ answer, rows }: { answer: MatrixAnswer; rows: string[] }) {
   const chosen = rows

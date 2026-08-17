@@ -25,6 +25,7 @@ const detail: ApplicationDetail = {
   applicantName: 'Ada Bell',
   applicantEmail: 'ada@example.com',
   yearOfStudy: '3',
+  faculty: 'Science',
   homeDepartment: 'CPSC',
   resumePath: null,
   status: 'reviewing',

@@ -1,6 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QUESTION_TYPES, type Answer, type Question } from '@/lib/questions/types';
+import {
+  QUESTION_TYPES,
+  type Answer,
+  type Question,
+  type SelectQuestion,
+} from '@/lib/questions/types';
 import { QuestionField } from '../question-field';
 import { everyQuestionType } from '@/test/apply-fixtures';
 
@@ -29,7 +34,7 @@ function setup(question: Question, value?: Answer) {
 const byId = new Map(everyQuestionType.map((question) => [question.type, question]));
 
 it('covers every question type in the union', () => {
-  // Guards the fixture rather than the component: a ninth type must arrive here
+  // Guards the fixture rather than the component: a tenth type must arrive here
   // with a case of its own, not quietly go untested.
   expect([...byId.keys()].sort()).toEqual([...QUESTION_TYPES].sort());
 });
@@ -75,6 +80,32 @@ describe('select', () => {
     const onChange = setup(byId.get('select')!, 'Yes');
     await userEvent.selectOptions(screen.getByLabelText(/Are you free on Saturdays/), '');
     expect(onChange).toHaveBeenCalledWith(undefined);
+  });
+
+  describe('with config.confirm', () => {
+    const confirmQuestion: Question = {
+      ...(byId.get('select')! as SelectQuestion),
+      label: 'I confirm that I am available to meet in-person every Saturday.',
+      config: { options: ['Yes', 'No'], confirm: true },
+    };
+
+    it('renders a checkbox rather than a dropdown', () => {
+      setup(confirmQuestion);
+      const checkbox = screen.getByLabelText(/I confirm that I am available/);
+      expect(checkbox).toHaveAttribute('type', 'checkbox');
+    });
+
+    it('answers the first option when checked', async () => {
+      const onChange = setup(confirmQuestion);
+      await userEvent.click(screen.getByLabelText(/I confirm that I am available/));
+      expect(onChange).toHaveBeenCalledWith('Yes');
+    });
+
+    it('answers nothing when unchecked — there is no "No" left to record', async () => {
+      const onChange = setup(confirmQuestion, 'Yes');
+      await userEvent.click(screen.getByLabelText(/I confirm that I am available/));
+      expect(onChange).toHaveBeenCalledWith(undefined);
+    });
   });
 });
 

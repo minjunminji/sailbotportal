@@ -15,7 +15,7 @@
 --
 -- WHAT THIS INSTALLS
 --
---   * three local sign-in accounts (two leads and one admin)
+--   * three local sign-in accounts, one lead per team
 --   * 40 applications across the three real postings and all eight statuses
 --   * notes and events on a handful of them
 --
@@ -66,7 +66,7 @@ where submission_id::text like 'fbfbfbfb-0000-4000-8000-%';
 -- profiles with no ON DELETE, so a lead who has authored a note cannot be
 -- removed until that note is gone.
 delete from auth.users
-where email in ('soft_lead@sailbot.local', 'mech_lead@sailbot.local', 'hiring_admin@sailbot.local');
+where email in ('soft@sailbot.local', 'elec@sailbot.local', 'mech@sailbot.local');
 
 -- ---------------------------------------------------------------------------
 -- Local sign-in accounts
@@ -76,13 +76,9 @@ where email in ('soft_lead@sailbot.local', 'mech_lead@sailbot.local', 'hiring_ad
 -- database that `db reset` throws away, and this file never runs against a
 -- deployed project.
 --
---   soft_lead@sailbot.local     lead, Software     password: sailbot-local-dev
---   mech_lead@sailbot.local     lead, Mechanical   password: sailbot-local-dev
---   hiring_admin@sailbot.local  admin, all teams   password: sailbot-local-dev
---
--- Electrical deliberately has NO lead. The admin covers it, which is what makes
--- "an admin sees every team" something you can see locally rather than take on
--- faith.
+--   soft@sailbot.local  lead, Software     password: test
+--   elec@sailbot.local  lead, Electrical   password: test
+--   mech@sailbot.local  lead, Mechanical   password: test
 --
 -- Written straight into auth.users because GoTrue has no SQL API. The empty
 -- strings on the token columns are not decoration: GoTrue scans them into Go
@@ -102,16 +98,16 @@ select
   'authenticated',
   'authenticated',
   u.email,
-  extensions.crypt('sailbot-local-dev', extensions.gen_salt('bf')),
+  extensions.crypt('test', extensions.gen_salt('bf')),
   now(),
   '{"provider": "email", "providers": ["email"]}'::jsonb,
   jsonb_build_object('name', u.name),
   now(), now(),
   '', '', '', '', '', ''
 from (values
-  ('soft_lead@sailbot.local',    'Sam Okonkwo'),
-  ('mech_lead@sailbot.local',    'Dana Whitfield'),
-  ('hiring_admin@sailbot.local', 'Robin Ashford')
+  ('soft@sailbot.local', 'Sam Okonkwo'),
+  ('elec@sailbot.local', 'Jordan Voss'),
+  ('mech@sailbot.local', 'Dana Whitfield')
 ) as u(email, name);
 
 -- Password sign-in needs an identity row alongside the user. Without it GoTrue
@@ -126,16 +122,16 @@ select
   'email',
   now(), now(), now()
 from auth.users u
-where u.email in ('soft_lead@sailbot.local', 'mech_lead@sailbot.local', 'hiring_admin@sailbot.local');
+where u.email in ('soft@sailbot.local', 'elec@sailbot.local', 'mech@sailbot.local');
 
 -- The on_auth_user_created trigger has already inserted a profile row for each
 -- of these with the default role and no team. This gives them their real ones.
 update profiles p
 set role = f.role, team_id = t.id, name = f.name
 from (values
-  ('soft_lead@sailbot.local',    'Sam Okonkwo',    'lead',  'soft'),
-  ('mech_lead@sailbot.local',    'Dana Whitfield', 'lead',  'mech'),
-  ('hiring_admin@sailbot.local', 'Robin Ashford',  'admin', null)
+  ('soft@sailbot.local', 'Sam Okonkwo',    'lead', 'soft'),
+  ('elec@sailbot.local', 'Jordan Voss',    'lead', 'elec'),
+  ('mech@sailbot.local', 'Dana Whitfield', 'lead', 'mech')
 ) as f(email, name, role, team_slug)
 left join teams t on t.slug = f.team_slug
 where p.email = f.email;
@@ -337,7 +333,7 @@ skills (n, payload) as (
 
 insert into applications (
   posting_id, submission_id, applicant_name, applicant_email, year_of_study,
-  home_department, resume_path, ranked_subteams, answers, question_schema_snapshot,
+  faculty, home_department, resume_path, ranked_subteams, answers, question_schema_snapshot,
   status, assigned_subteam_id, interview_at, status_changed_at, submitted_at
 )
 select
@@ -346,6 +342,10 @@ select
   f.name,
   f.email,
   f.year,
+  -- Derived from the program rather than carried as a fiftieth column in the
+  -- fixture: every code above is an engineering one except the two science
+  -- ones, and a faculty nobody reads is not worth fifty hand-written strings.
+  case when f.dept in ('CPSC', 'PHYS', 'MATH', 'STAT') then 'Science' else 'Applied Science' end,
   f.dept,
   null,
   -- Ranked subteams resolved from slug to id IN PREFERENCE ORDER, and scoped to
@@ -427,23 +427,23 @@ join skills sk on sk.n = f.sub_no % 3;
 -- ---------------------------------------------------------------------------
 -- Notes on a handful
 -- ---------------------------------------------------------------------------
--- Attributed to the lead of the owning team, or to the admin for Electrical,
--- which has no lead. Notes are append-only at the database level — no policy
--- grants UPDATE or DELETE — so there is no fixture for an edited note, because
--- an edited note cannot exist.
+-- Attributed to the lead of the owning team — every team has exactly one now.
+-- Notes are append-only at the database level — no policy grants UPDATE or
+-- DELETE — so there is no fixture for an edited note, because an edited note
+-- cannot exist.
 insert into application_notes (application_id, author_id, body, created_at)
 select a.id, author.id, n.body, a.status_changed_at + make_interval(hours => n.hours_after)
 from (values
-  ('daniel_okafor@student.ubc.ca', 'soft-2026', 'soft_lead@sailbot.local',    'Strong pathfinding answer, clearly written. Worth a look from whoever runs the CTRL interview too.',  2),
-  ('daniel_okafor@student.ubc.ca', 'soft-2026', 'hiring_admin@sailbot.local', 'Agreed. Second choice is controller so either interview works.',                                    30),
-  ('nina_petrov@student.ubc.ca',   'soft-2026', 'soft_lead@sailbot.local',    'Interview went well. Confident on control theory, less so on Git. Recommend controller.',            4),
-  ('sara_ahmadi@student.ubc.ca',   'soft-2026', 'soft_lead@sailbot.local',    'Best technical quiz in the pile. Offer sent, waiting on a reply.',                                   1),
-  ('sara_ahmadi@student.ubc.ca',   'soft-2026', 'hiring_admin@sailbot.local', 'Flagging that she also asked about DevOps. Keep that open if PATH fills up.',                        6),
-  ('grace_liu@student.ubc.ca',     'soft-2026', 'soft_lead@sailbot.local',    'This one has been sitting since the form opened. Needs a first read.',                              -1),
-  ('rachel_kim@student.ubc.ca',    'mech-2026', 'mech_lead@sailbot.local',    'Good composites background from the concrete toboggan team. Rudder is the right fit.',               5),
-  ('chloe_dubois@student.ubc.ca',  'mech-2026', 'mech_lead@sailbot.local',    'Offered sail. She has done wet layup before, which nobody else in this round has.',                   2),
-  ('elena_rossi@student.ubc.ca',   'elec-2026', 'hiring_admin@sailbot.local', 'Offer out for COM. Strong on the noise question.',                                                   3),
-  ('elena_rossi@student.ubc.ca',   'elec-2026', 'hiring_admin@sailbot.local', 'Following up Friday if there is no reply.',                                                         20)
+  ('daniel_okafor@student.ubc.ca', 'soft-2026', 'soft@sailbot.local', 'Strong pathfinding answer, clearly written. Worth a look from whoever runs the CTRL interview too.',  2),
+  ('daniel_okafor@student.ubc.ca', 'soft-2026', 'soft@sailbot.local', 'Agreed. Second choice is controller so either interview works.',                                    30),
+  ('nina_petrov@student.ubc.ca',   'soft-2026', 'soft@sailbot.local', 'Interview went well. Confident on control theory, less so on Git. Recommend controller.',            4),
+  ('sara_ahmadi@student.ubc.ca',   'soft-2026', 'soft@sailbot.local', 'Best technical quiz in the pile. Offer sent, waiting on a reply.',                                   1),
+  ('sara_ahmadi@student.ubc.ca',   'soft-2026', 'soft@sailbot.local', 'Flagging that she also asked about DevOps. Keep that open if PATH fills up.',                        6),
+  ('grace_liu@student.ubc.ca',     'soft-2026', 'soft@sailbot.local', 'This one has been sitting since the form opened. Needs a first read.',                              -1),
+  ('rachel_kim@student.ubc.ca',    'mech-2026', 'mech@sailbot.local', 'Good composites background from the concrete toboggan team. Rudder is the right fit.',               5),
+  ('chloe_dubois@student.ubc.ca',  'mech-2026', 'mech@sailbot.local', 'Offered sail. She has done wet layup before, which nobody else in this round has.',                   2),
+  ('elena_rossi@student.ubc.ca',   'elec-2026', 'elec@sailbot.local', 'Offer out for COM. Strong on the noise question.',                                                   3),
+  ('elena_rossi@student.ubc.ca',   'elec-2026', 'elec@sailbot.local', 'Following up Friday if there is no reply.',                                                         20)
 ) as n(email, posting_slug, author_email, body, hours_after)
 join postings p on p.slug = n.posting_slug
 join applications a on a.posting_id = p.id and a.applicant_email = n.email
@@ -463,16 +463,13 @@ where a.submission_id::text like 'fbfbfbfb-0000-4000-8000-%';
 insert into application_events (application_id, actor_id, type, from_status, to_status, created_at)
 select
   a.id,
-  -- The team's own lead where there is one, otherwise the admin. A scalar
-  -- subquery rather than a join: a developer who has created a second lead for
-  -- the same team would otherwise get two event rows per application.
-  coalesce(
-    (select l.id from profiles l
-     where l.team_id = p.team_id and l.role = 'lead' and l.email like '%@sailbot.local'
-     order by l.created_at
-     limit 1),
-    (select id from profiles where email = 'hiring_admin@sailbot.local')
-  ),
+  -- The team's own lead. A scalar subquery rather than a join: a developer who
+  -- has created a second lead for the same team would otherwise get two event
+  -- rows per application.
+  (select l.id from profiles l
+   where l.team_id = p.team_id and l.role = 'lead'
+   order by l.created_at
+   limit 1),
   'status_changed',
   'applied',
   a.status,
@@ -627,10 +624,10 @@ begin
   -- query layer rather than as a bad fixture.
   select count(*) into v_accounts
   from profiles p
-  left join teams t on t.id = p.team_id
-  where (p.email = 'soft_lead@sailbot.local'    and p.role = 'lead'  and t.slug = 'soft')
-     or (p.email = 'mech_lead@sailbot.local'    and p.role = 'lead'  and t.slug = 'mech')
-     or (p.email = 'hiring_admin@sailbot.local' and p.role = 'admin' and p.team_id is null);
+  join teams t on t.id = p.team_id
+  where (p.email = 'soft@sailbot.local' and p.role = 'lead' and t.slug = 'soft')
+     or (p.email = 'elec@sailbot.local' and p.role = 'lead' and t.slug = 'elec')
+     or (p.email = 'mech@sailbot.local' and p.role = 'lead' and t.slug = 'mech');
   if v_accounts <> 3 then
     raise exception 'expected 3 local accounts with the right roles and teams, found %', v_accounts;
   end if;
@@ -648,7 +645,7 @@ begin
   end loop;
   raise notice 'notes: %  events: %', v_notes, v_events;
   raise notice 'submissions spanning two teams: %  repeat applicants: %', v_shared_subs, v_repeat_emails;
-  raise notice 'sign in as soft_lead@ / mech_lead@ / hiring_admin@sailbot.local, password sailbot-local-dev';
+  raise notice 'sign in as soft@ / elec@ / mech@sailbot.local, password test';
   raise notice '-----------------------------------------------------------';
 end;
 $verify$;

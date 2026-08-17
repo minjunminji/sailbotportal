@@ -43,9 +43,10 @@ export const DEFAULT_COLLAPSED: ApplicationStatus[] = ['waitlisted', 'rejected']
  * Short year labels, for a card with about twelve characters to spend on this
  * line.
  *
- * `YEAR_OF_STUDY_OPTIONS` carries the long forms the applicant chose from
- * ("Fifth year or beyond"), which is right on a form and far too wide here. The
- * two are kept in step by a test asserting every ordinal has a short label, so
+ * `YEAR_OF_STUDY_OPTIONS` carries the labels the applicant chose from, which
+ * are bare ordinals sitting under a "Year of study" label; on a card there is no
+ * such label, so these say `yr`. The two are kept in step by a test asserting
+ * every ordinal has a short label, so
  * adding a year of study to the form cannot silently leave the board rendering
  * a raw `'phd'`.
  */

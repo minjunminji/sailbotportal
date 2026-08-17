@@ -102,6 +102,7 @@ async function makeApplication(postingId: string, path: string | null, name: str
       applicant_name: name,
       applicant_email: `resume_${crypto.randomUUID()}@resumetest.dev`,
       year_of_study: '2',
+      faculty: 'Science',
       home_department: 'CPSC',
       ranked_subteams: [],
       answers: {},

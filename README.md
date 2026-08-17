@@ -149,11 +149,10 @@ Do not copy the Supabase CLI's common `54321` examples into `.env.local`; this p
 
 These credentials exist only in the local seed data:
 
-- Software lead: `soft_lead@sailbot.local` / `sailbot-local-dev`
-- Mechanical lead: `mech_lead@sailbot.local` / `sailbot-local-dev`
-- Admin for all teams: `hiring_admin@sailbot.local` / `sailbot-local-dev`
+- Software lead: `soft@sailbot.local` / `test`
+- Electrical lead: `elec@sailbot.local` / `test`
+- Mechanical lead: `mech@sailbot.local` / `test`
 
-There is no separate seeded Electrical lead; use the admin account to view that board.
 The seed also creates sample applications, notes, and status events.
 
 ### Windows Supabase caveat

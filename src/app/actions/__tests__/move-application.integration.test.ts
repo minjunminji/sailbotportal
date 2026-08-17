@@ -97,6 +97,7 @@ async function makeApplication(
       applicant_name: 'Test Applicant',
       applicant_email: `move_${crypto.randomUUID()}@movetest.dev`,
       year_of_study: '2',
+      faculty: 'Science',
       home_department: 'CPSC',
       ranked_subteams: [],
       question_schema_snapshot: [],

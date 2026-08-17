@@ -122,6 +122,7 @@ beforeAll(async () => {
         applicant_name: 'Mech Applicant',
         applicant_email: 'mech@student.ubc.ca',
         year_of_study: '3',
+        faculty: 'Applied Science',
         home_department: 'MECH',
         question_schema_snapshot: [],
       },
@@ -131,6 +132,7 @@ beforeAll(async () => {
         applicant_name: 'Soft Applicant',
         applicant_email: 'soft@student.ubc.ca',
         year_of_study: '2',
+        faculty: 'Science',
         home_department: 'CPSC',
         question_schema_snapshot: [],
       },
@@ -269,6 +271,7 @@ describe('anonymous access', () => {
       applicant_name: 'Sneaky',
       applicant_email: 'sneaky@example.com',
       year_of_study: '1',
+      faculty: 'Science',
       home_department: 'CPSC',
       question_schema_snapshot: [],
     });

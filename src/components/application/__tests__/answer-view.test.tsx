@@ -4,7 +4,7 @@ import { readSnapshot } from '@/lib/applications/detail';
 import { AnswerView } from '../answer-view';
 
 /**
- * Reading back an answer of each of the eight types.
+ * Reading back an answer of each of the nine types.
  *
  * The renderer's `switch` is exhaustive at compile time, but "compiles" and
  * "renders the answer rather than nothing" are different claims, so every type
@@ -157,7 +157,7 @@ describe('a question with no answer', () => {
 });
 
 it('renders every question type the union declares', () => {
-  // Fails the day a ninth type is added without a case above, which is the
+  // Fails the day a tenth type is added without a case above, which is the
   // moment it would otherwise start rendering as nothing.
   const covered = [
     'short_text',
@@ -166,6 +166,7 @@ it('renders every question type the union declares', () => {
     'multi_select',
     'scale',
     'matrix',
+    'skills',
     'ranking',
     'file',
   ];

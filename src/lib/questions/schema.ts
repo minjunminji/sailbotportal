@@ -4,6 +4,7 @@ import {
   type FileQuestion,
   type LongTextQuestion,
   type MatrixQuestion,
+  type SkillsQuestion,
   type MultiSelectQuestion,
   type Question,
   type RankingQuestion,
@@ -80,6 +81,8 @@ function fieldSchema(question: Question, required: boolean): z.ZodTypeAny {
       return scaleField(question, required);
     case 'matrix':
       return matrixField(question, required);
+    case 'skills':
+      return skillsField(question, required);
     case 'ranking':
       return rankingField(question, required);
     case 'file':
@@ -139,9 +142,13 @@ function textField(
     }
 
     if (question.type === 'long_text') {
-      const minWords = question.config.minWords;
-      if (minWords !== undefined && countWords(value) < minWords) {
+      const { minWords, maxWords } = question.config;
+      const words = countWords(value);
+      if (minWords !== undefined && words < minWords) {
         ctx.addIssue({ code: 'custom', message: `Write at least ${minWords} words` });
+      }
+      if (maxWords !== undefined && words > maxWords) {
+        ctx.addIssue({ code: 'custom', message: `Keep this to ${maxWords} words` });
       }
       return;
     }
@@ -226,6 +233,47 @@ function scaleField(question: ScaleQuestion, required: boolean): z.ZodTypeAny {
  * skills grid explicitly allows a row with neither box ticked — so `required`
  * means at least one selection somewhere, not one per row.
  */
+/**
+ * A level and a learning flag per skill, keyed by the skill's own label.
+ *
+ * Keyed by label rather than by index so the stored answer stays readable next
+ * to the frozen snapshot, the same way the matrix keys by row label. A skill
+ * the question does not list is rejected outright: an unknown key here would
+ * become a column in the export that no lead ever asked for.
+ *
+ * `required` means the applicant said something about at least one skill, not
+ * that every skill has a level.
+ */
+function skillsField(question: SkillsQuestion, required: boolean): z.ZodTypeAny {
+  const { skills, maxLevel } = question.config;
+  const known = new Set(skills);
+
+  const entry = z.strictObject({
+    // The bottom of the scale is 1 and means no experience, so there is no
+    // separate "unanswered" level — an unanswered skill is simply absent.
+    level: z.number().int().min(1).max(maxLevel),
+    wantsToLearn: z.boolean(),
+  });
+
+  const schema = z.record(z.string(), entry).superRefine((value, ctx) => {
+    for (const skill of Object.keys(value)) {
+      if (!known.has(skill)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [skill],
+          message: 'This skill is not part of the question',
+        });
+      }
+    }
+
+    if (required && Object.keys(value).length === 0) {
+      ctx.addIssue({ code: 'custom', message: 'Rate at least one skill' });
+    }
+  });
+
+  return withPresence(schema, required);
+}
+
 function matrixField(question: MatrixQuestion, required: boolean): z.ZodTypeAny {
   const { rows, columns, mode } = question.config;
   const knownRows = new Set(rows);
