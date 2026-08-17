@@ -81,6 +81,23 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /*
+   * Tailwind's preflight sets every button to `cursor: default`, on the
+   * reasoning that a native OS button does not change the pointer. On the web
+   * it does, and people read the hand as "this is a control" — without it a
+   * borderless button like the notice's dismiss X is indistinguishable from
+   * decoration until it is clicked.
+   *
+   * Disabled controls are left alone: keeping the arrow there is the point.
+   *
+   * In `@layer base`, so any single button that genuinely wants a different
+   * cursor can still say so with a utility class.
+   */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
 }
 
 /**
