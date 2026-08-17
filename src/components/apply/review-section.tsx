@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { resolveLabel } from '@/lib/questions/labels';
 import {
   isFile,
   isMatrix,
@@ -93,7 +94,10 @@ export function ReviewSection({
               {visibleTeamQuestions(posting, team.rankedSubteams).map((question) => (
                 <ReviewItem
                   key={question.id}
-                  label={question.label}
+                  // The same substitution the form made. Review exists to show
+                  // what is about to be sent, so it must not quietly restate a
+                  // question differently from where it was answered.
+                  label={resolveLabel(question.label, ranked[0]?.code || ranked[0]?.name)}
                   value={formatAnswer(question, team.answers[question.id])}
                 />
               ))}

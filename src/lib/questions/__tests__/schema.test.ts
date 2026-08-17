@@ -159,6 +159,17 @@ describe('text limits', () => {
     expect(failures(questions, { github: 'abcdef' })).toEqual(['github']);
   });
 
+  it('caps words for maxWords, not characters', () => {
+    // The ceiling twin of minWords. A one-sentence answer is a word count, not
+    // a character count: "300 characters" is a number nobody can picture.
+    const questions = [longText({ config: { maxWords: 5 } })];
+
+    expect(accepts(questions, { why: 'one two three four five' })).toBe(true);
+    expect(failures(questions, { why: 'one two three four five six' })).toEqual(['why']);
+    // Five very long words are still five words.
+    expect(accepts(questions, { why: ['a'.repeat(80), 'b', 'c', 'd', 'e'].join(' ') })).toBe(true);
+  });
+
   it('counts words for minWords, not characters', () => {
     const questions = [longText({ config: { minWords: 5 } })];
 

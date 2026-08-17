@@ -21,15 +21,23 @@ export function LongTextField({
   disabled,
 }: FieldProps<LongTextQuestion>) {
   const text = asText(value);
-  const { maxLength, minWords } = question.config;
+  const { maxLength, minWords, maxWords } = question.config;
   const words = countWords(text);
 
   const parts: string[] = [];
   if (minWords !== undefined) parts.push(`${words} of at least ${minWords} words`);
-  if (maxLength !== undefined) parts.push(`${text.length} of ${maxLength} characters`);
+  if (maxWords !== undefined) parts.push(`${words} of ${maxWords} words`);
+  // Only when no word limit is stated. Where a question is expressed in words,
+  // a character count beside it is a second limit to track and the one nobody
+  // was asked to respect.
+  if (maxLength !== undefined && minWords === undefined && maxWords === undefined) {
+    parts.push(`${text.length} of ${maxLength} characters`);
+  }
 
   const short = minWords !== undefined && text !== '' && words < minWords;
-  const long = maxLength !== undefined && text.length > maxLength;
+  const long =
+    (maxLength !== undefined && text.length > maxLength) ||
+    (maxWords !== undefined && words > maxWords);
   const countId = parts.length > 0 ? `${fieldId}-count` : undefined;
 
   return (

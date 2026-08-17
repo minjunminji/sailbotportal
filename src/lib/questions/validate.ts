@@ -69,10 +69,20 @@ const shortText = z.strictObject({
 const longText = z.strictObject({
   ...base,
   type: z.literal('long_text'),
-  config: z.strictObject({
-    maxLength: positiveInt.optional(),
-    minWords: positiveInt.optional(),
-  }),
+  config: z
+    .strictObject({
+      maxLength: positiveInt.optional(),
+      minWords: positiveInt.optional(),
+      maxWords: positiveInt.optional(),
+    })
+    // A floor above the ceiling is a question nobody can answer.
+    .refine(
+      (config) =>
+        config.minWords === undefined ||
+        config.maxWords === undefined ||
+        config.minWords <= config.maxWords,
+      { message: 'minWords must not exceed maxWords', path: ['maxWords'] },
+    ),
 });
 
 const select = z.strictObject({

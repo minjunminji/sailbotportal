@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { softwarePosting } from '@/test/apply-fixtures';
+import { FIRST_SUBTEAM_TOKEN } from '@/lib/questions/labels';
+import { softwarePosting, subteams } from '@/test/apply-fixtures';
 import { teamSectionId } from '../sections';
 import { TeamQuestions } from '../team-questions';
 import { emptyTeamState, type TeamState } from '../types';
@@ -25,6 +26,45 @@ function questions(state: TeamState = emptyTeamState()) {
     />,
   );
 }
+
+describe('a question that names the first choice', () => {
+  /** A posting whose only question asks about the applicant's own top pick. */
+  function askingAboutFirstChoice(ranked: string[]) {
+    const posting = softwarePosting([
+      {
+        id: 'first_choice_reason',
+        type: 'long_text',
+        label: `Why is ${FIRST_SUBTEAM_TOKEN} your first choice?`,
+        required: true,
+        config: { maxWords: 30 },
+      },
+    ]);
+    return render(
+      <TeamQuestions
+        posting={posting}
+        state={{ ...emptyTeamState(), rankedSubteams: ranked }}
+        errors={noErrors}
+        onRank={() => {}}
+        onAnswer={() => {}}
+      />,
+    );
+  }
+
+  it('uses the code of whichever subteam is ranked first', () => {
+    askingAboutFirstChoice([subteams[1].id, subteams[0].id]);
+    expect(screen.getByText(/Why is NET your first choice\?/)).toBeInTheDocument();
+  });
+
+  it('reads as a sentence before anything is ranked', () => {
+    askingAboutFirstChoice([]);
+    expect(screen.getByText(/Why is that subteam your first choice\?/)).toBeInTheDocument();
+  });
+
+  it('never shows the placeholder itself', () => {
+    askingAboutFirstChoice([subteams[0].id]);
+    expect(screen.queryByText(/firstSubteam/)).not.toBeInTheDocument();
+  });
+});
 
 describe("a team's questions", () => {
   it('lives under the id the rail links to', () => {

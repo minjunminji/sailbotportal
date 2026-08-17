@@ -139,9 +139,13 @@ function textField(
     }
 
     if (question.type === 'long_text') {
-      const minWords = question.config.minWords;
-      if (minWords !== undefined && countWords(value) < minWords) {
+      const { minWords, maxWords } = question.config;
+      const words = countWords(value);
+      if (minWords !== undefined && words < minWords) {
         ctx.addIssue({ code: 'custom', message: `Write at least ${minWords} words` });
+      }
+      if (maxWords !== undefined && words > maxWords) {
+        ctx.addIssue({ code: 'custom', message: `Keep this to ${maxWords} words` });
       }
       return;
     }

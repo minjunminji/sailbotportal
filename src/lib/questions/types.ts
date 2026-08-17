@@ -63,6 +63,12 @@ export type LongTextConfig = {
   maxLength?: number;
   /** A floor on words, not characters. */
   minWords?: number;
+  /**
+   * A ceiling on words. Prefer this to `maxLength` where the instruction is
+   * about length as a person experiences it — "one sentence" is a handful of
+   * words, and nobody can picture 300 characters.
+   */
+  maxWords?: number;
 };
 
 export type SelectConfig = {
