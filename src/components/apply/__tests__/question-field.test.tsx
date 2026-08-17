@@ -29,7 +29,7 @@ function setup(question: Question, value?: Answer) {
 const byId = new Map(everyQuestionType.map((question) => [question.type, question]));
 
 it('covers every question type in the union', () => {
-  // Guards the fixture rather than the component: a ninth type must arrive here
+  // Guards the fixture rather than the component: a tenth type must arrive here
   // with a case of its own, not quietly go untested.
   expect([...byId.keys()].sort()).toEqual([...QUESTION_TYPES].sort());
 });

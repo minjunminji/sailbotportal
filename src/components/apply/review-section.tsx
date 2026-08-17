@@ -5,13 +5,22 @@ import { resolveLabel } from '@/lib/questions/labels';
 import {
   isFile,
   isMatrix,
+  isSkills,
   isMultiSelect,
   isRanking,
   isScale,
   type Answer,
   type Question,
 } from '@/lib/questions/types';
-import { asFileAnswer, asMatrixAnswer, asNumber, asStringList, asText, isBlank } from './answers';
+import {
+  asFileAnswer,
+  asMatrixAnswer,
+  asNumber,
+  asSkillsAnswer,
+  asStringList,
+  asText,
+  isBlank,
+} from './answers';
 import { ordinal } from './ordered-choice-list';
 import { YEAR_OF_STUDY_OPTIONS, type ApplyData, type FormState } from './types';
 import { visibleCoreQuestions, visibleTeamQuestions } from './visibility';
@@ -151,6 +160,30 @@ export function formatAnswer(question: Question, value: Answer | undefined): Rea
   if (isFile(question)) {
     const file = asFileAnswer(value);
     return file ? file.filename : '';
+  }
+
+  if (isSkills(question)) {
+    const answer = asSkillsAnswer(value);
+    const { maxLevel, minLabel, maxLabel } = question.config;
+    // In the question's order, not the order the sliders happened to be moved
+    // in: review is for checking against the form above, which is fixed.
+    const rated = question.config.skills.filter((skill) => answer[skill] !== undefined);
+    if (rated.length === 0) return '';
+    return (
+      <ul className="flex flex-col gap-1">
+        {rated.map((skill) => {
+          const { level, wantsToLearn } = answer[skill];
+          const named =
+            level <= 1 ? minLabel : level >= maxLevel ? maxLabel : `${level} of ${maxLevel}`;
+          return (
+            <li key={skill}>
+              {skill}: {named}
+              {wantsToLearn ? ' · wants to learn/improve' : ''}
+            </li>
+          );
+        })}
+      </ul>
+    );
   }
 
   if (isMatrix(question)) {

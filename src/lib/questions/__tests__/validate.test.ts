@@ -46,14 +46,26 @@ const validByType: Record<string, Record<string, unknown>> = {
     config: { min: 1, max: 5, minLabel: 'Never used it', maxLabel: 'Very confident' },
   },
   matrix: {
-    id: 'technical_skills',
+    id: 'availability_grid',
     type: 'matrix',
-    label: 'What relevant technical skills do you have?',
+    label: 'When are you free?',
     required: false,
     config: {
-      rows: ['Python', 'C/C++'],
-      columns: ['I have this skill', 'I want to learn/improve this skill'],
+      rows: ['Monday', 'Tuesday'],
+      columns: ['Morning', 'Afternoon'],
       mode: 'multi',
+    },
+  },
+  skills: {
+    id: 'technical_skills',
+    type: 'skills',
+    label: 'What are your technical skills?',
+    required: false,
+    config: {
+      skills: ['Python', 'C/C++'],
+      maxLevel: 5,
+      minLabel: 'No experience',
+      maxLabel: 'Could teach it',
     },
   },
   ranking: {
@@ -82,7 +94,7 @@ function omit(source: Record<string, unknown>, key: string): Record<string, unkn
 describe('validateQuestion accepts every well-formed type', () => {
   // Guards against a type joining the union with no validation branch: this
   // fails to enumerate before it fails to validate.
-  it('covers all eight question types', () => {
+  it('covers all nine question types', () => {
     expect(Object.keys(validByType).sort()).toEqual([...QUESTION_TYPES].sort());
   });
 

@@ -20,6 +20,7 @@ export const QUESTION_TYPES = [
   'multi_select',
   'scale',
   'matrix',
+  'skills',
   'ranking',
   'file',
 ] as const;
@@ -99,6 +100,22 @@ export type MatrixConfig = {
   mode: 'single' | 'multi';
 };
 
+/**
+ * A list of skills, each rated on a scale and optionally flagged as something
+ * the applicant wants to work on.
+ *
+ * The scale always starts at 1, which is the slider's resting position and so
+ * has to mean "no experience" — an untouched row must not read as a claim
+ * nobody made. `minLabel` is what says so on screen.
+ */
+export type SkillsConfig = {
+  skills: string[];
+  /** Top of the scale. The bottom is always 1. */
+  maxLevel: number;
+  minLabel: string;
+  maxLabel: string;
+};
+
 export type RankingConfig = {
   options: string[];
   /**
@@ -129,6 +146,7 @@ export type MultiSelectQuestion = QuestionBase & {
 };
 export type ScaleQuestion = QuestionBase & { type: 'scale'; config: ScaleConfig };
 export type MatrixQuestion = QuestionBase & { type: 'matrix'; config: MatrixConfig };
+export type SkillsQuestion = QuestionBase & { type: 'skills'; config: SkillsConfig };
 export type RankingQuestion = QuestionBase & { type: 'ranking'; config: RankingConfig };
 export type FileQuestion = QuestionBase & { type: 'file'; config: FileConfig };
 
@@ -140,6 +158,7 @@ export type Question =
   | MultiSelectQuestion
   | ScaleQuestion
   | MatrixQuestion
+  | SkillsQuestion
   | RankingQuestion
   | FileQuestion;
 
@@ -164,6 +183,15 @@ export type FileAnswer = {
  */
 export type MatrixAnswer = Record<string, string[]>;
 
+/**
+ * Skill label -> how good they are at it, and whether they want to work on it.
+ *
+ * A skill left at the bottom of the scale with the box unticked is absent from
+ * the map rather than stored as a resting value, so fifteen untouched rows do
+ * not become fifteen claims of level 1.
+ */
+export type SkillsAnswer = Record<string, { level: number; wantsToLearn: boolean }>;
+
 /** The answer each question type produces. */
 export type AnswerByType = {
   short_text: string;
@@ -172,6 +200,7 @@ export type AnswerByType = {
   multi_select: string[];
   scale: number;
   matrix: MatrixAnswer;
+  skills: SkillsAnswer;
   ranking: string[];
   file: FileAnswer;
 };
@@ -188,7 +217,7 @@ export type AnswerMap = Record<string, Answer | undefined>;
 
 // --- Type guards ------------------------------------------------------------
 
-/** True when `value` names one of the eight known types. */
+/** True when `value` names one of the nine known types. */
 export function isQuestionType(value: unknown): value is QuestionType {
   return typeof value === 'string' && (QUESTION_TYPES as readonly string[]).includes(value);
 }
@@ -223,6 +252,10 @@ export function isScale(question: Question): question is ScaleQuestion {
 
 export function isMatrix(question: Question): question is MatrixQuestion {
   return question.type === 'matrix';
+}
+
+export function isSkills(question: Question): question is SkillsQuestion {
+  return question.type === 'skills';
 }
 
 export function isRanking(question: Question): question is RankingQuestion {

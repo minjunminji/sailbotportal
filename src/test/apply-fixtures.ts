@@ -88,6 +88,18 @@ export const everyQuestionType: Question[] = [
     },
   },
   {
+    id: 'technical_skills',
+    type: 'skills',
+    label: 'What are your technical skills?',
+    required: false,
+    config: {
+      skills: ['Python', 'Docker'],
+      maxLevel: 5,
+      minLabel: 'No experience',
+      maxLabel: 'Could teach it',
+    },
+  },
+  {
     id: 'priorities',
     type: 'ranking',
     label: 'Rank what you want to work on',

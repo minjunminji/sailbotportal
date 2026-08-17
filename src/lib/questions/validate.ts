@@ -6,7 +6,7 @@ import { QUESTION_TYPES, type Question } from './types';
  * answering side.
  *
  * `resolveQuestions` deliberately checks only what a snapshot cannot do
- * without: an id and one of the eight known types. That is the right bar for
+ * without: an id and one of the nine known types. That is the right bar for
  * the hot path, but it leaves every `config` unchecked, and a config is where a
  * hand-written question goes wrong: `maxChoices` larger than the option list, a
  * `scale` whose `min` exceeds its `max`, a `matrix` with no rows. None of those
@@ -130,6 +130,19 @@ const matrix = z.strictObject({
   }),
 });
 
+const skills = z.strictObject({
+  ...base,
+  type: z.literal('skills'),
+  config: z.strictObject({
+    skills: labelList('skills'),
+    // The bottom of the scale is fixed at 1, so a top of 1 would be a scale
+    // with one point — a control that cannot express anything.
+    maxLevel: z.number().int().min(2),
+    minLabel: z.string().min(1),
+    maxLabel: z.string().min(1),
+  }),
+});
+
 const ranking = z.strictObject({
   ...base,
   type: z.literal('ranking'),
@@ -159,6 +172,7 @@ const questionSchema = z.discriminatedUnion('type', [
   multiSelect,
   scale,
   matrix,
+  skills,
   ranking,
   file,
 ]);
@@ -199,7 +213,7 @@ export function validateQuestion(value: unknown): Question {
   }
 
   // Checked before the union so an unknown type reports itself, rather than
-  // producing eight parallel "expected literal" failures.
+  // producing nine parallel "expected literal" failures.
   const type = (value as { type?: unknown }).type;
   if (typeof type !== 'string' || !(QUESTION_TYPES as readonly string[]).includes(type)) {
     throw new Error(
