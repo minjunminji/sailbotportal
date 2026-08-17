@@ -10,6 +10,13 @@ import type { FormSection } from './sections';
  * `lg`. A sticky element competing with an on-screen keyboard and a focused
  * textarea costs a phone more room than the orientation is worth.
  *
+ * ROWS AND NOTHING ELSE. It carried a footer naming the teams the application
+ * covered, which said what the rows already say — a chosen team has a row here
+ * and an unchosen one does not — and the form's own submit line says it again
+ * where the decision is acted on. Review has never been offered here either:
+ * that is the form's action and it lives at the end of the form, where someone
+ * who has just answered the last question already is.
+ *
  * Rows are real anchors, not buttons calling `scrollIntoView`. They work before
  * hydration, and — the part that is easy to lose — following an anchor moves
  * FOCUS to the section, not merely the viewport. With a click handler alone, a
@@ -20,14 +27,11 @@ import type { FormSection } from './sections';
 export function SectionRail({
   sections,
   activeId,
-  applyingTo,
   onNavigate,
 }: {
   sections: FormSection[];
   /** The section currently being read, from `useActiveSection`. */
   activeId: string | null;
-  /** Team names the application currently covers, in form order. */
-  applyingTo: string[];
   /** Lets the hook settle the active row immediately instead of mid-scroll. */
   onNavigate?: (id: string) => void;
 }) {
@@ -49,20 +53,6 @@ export function SectionRail({
           />
         ))}
       </ul>
-
-      {/*
-        The rail navigates and nothing else. Review is the form's own action and
-        lives at the end of the form, where someone who has just answered the
-        last question already is; duplicating it here put the same button on
-        screen twice and made the rail look like a place to submit from.
-      */}
-      <div className="mt-6 border-t border-border pt-4">
-        <p className="text-xs text-muted-foreground">
-          {applyingTo.length === 0
-            ? 'No teams chosen yet.'
-            : `Applying to ${applyingTo.join(', ')}.`}
-        </p>
-      </div>
     </nav>
   );
 }

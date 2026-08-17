@@ -65,7 +65,10 @@ async function fillIdentity(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/Full name/), 'Sam Rivers');
   await user.type(screen.getByLabelText(/^Email/), 'sam@student.ubc.ca');
   await user.selectOptions(screen.getByLabelText(/Year of study/), '2');
-  await user.type(screen.getByLabelText(/Home department/), 'MECH — Mechanical Engineering');
+  await user.selectOptions(screen.getByLabelText(/Faculty/), 'Applied Science');
+  // Applied Science asks for a program code from a list; every other faculty
+  // takes free text, which is covered in its own test below.
+  await user.selectOptions(screen.getByLabelText(/Program or major/), 'MECH');
   await user.type(screen.getByLabelText(/Why do you want to join/), 'Boats.');
 }
 
@@ -137,6 +140,50 @@ describe('conditional questions', () => {
   });
 });
 
+describe('faculty and program', () => {
+  const data = applyData([mechanicalPosting()]);
+
+  it('asks for a program code under Applied Science and free text elsewhere', async () => {
+    const user = userEvent.setup();
+    render(<ApplyForm data={data} submit={succeeds()} />);
+
+    // Nothing chosen yet: the box takes whatever the applicant studies, because
+    // there is no list to offer until a faculty says which one.
+    expect(screen.getByLabelText(/Program or major/).tagName).toBe('INPUT');
+
+    await user.selectOptions(screen.getByLabelText(/Faculty/), 'Applied Science');
+    const program = screen.getByLabelText(/Program or major/);
+    expect(program.tagName).toBe('SELECT');
+    expect(screen.getByRole('option', { name: /MECH/ })).toBeInTheDocument();
+
+    await user.selectOptions(program, 'MECH');
+    // The CODE alone is what is stored, not the label the applicant read.
+    expect(program).toHaveValue('MECH');
+
+    await user.selectOptions(screen.getByLabelText(/Faculty/), 'Science');
+    expect(screen.getByLabelText(/Program or major/).tagName).toBe('INPUT');
+  });
+
+  it('drops a program that the new faculty cannot express, and keeps one it can', async () => {
+    const user = userEvent.setup();
+    render(<ApplyForm data={data} submit={succeeds()} />);
+
+    await user.selectOptions(screen.getByLabelText(/Faculty/), 'Applied Science');
+    await user.selectOptions(screen.getByLabelText(/Program or major/), 'MECH');
+
+    // 'MECH' means nothing in Arts, and the field it was chosen in no longer
+    // exists, so leaving it would submit an engineering code under Arts.
+    await user.selectOptions(screen.getByLabelText(/Faculty/), 'Arts');
+    expect(screen.getByLabelText(/Program or major/)).toHaveValue('');
+
+    // Between two free-text faculties there is nothing to reconcile: someone
+    // correcting Arts to Science has not changed what they study.
+    await user.type(screen.getByLabelText(/Program or major/), 'Philosophy');
+    await user.selectOptions(screen.getByLabelText(/Faculty/), 'Science');
+    expect(screen.getByLabelText(/Program or major/)).toHaveValue('Philosophy');
+  });
+});
+
 describe('draft autosave', () => {
   const data = applyData([mechanicalPosting()]);
 
@@ -183,8 +230,8 @@ describe('draft autosave', () => {
     render(<ApplyForm data={fileData} submit={succeeds()} />);
 
     expect(screen.getByLabelText(/Full name/)).toHaveValue('Sam Rivers');
-    expect(screen.getByText('No file uploaded yet.')).toBeInTheDocument();
-    expect(screen.queryByText(/Uploaded quiz.zip/)).not.toBeInTheDocument();
+    // Neither file survived the remount: nothing names either upload on screen.
+    expect(screen.queryByText(/Uploaded/)).not.toBeInTheDocument();
   });
 
   it('is cleared when the application is sent', async () => {
@@ -338,7 +385,7 @@ describe('submission', () => {
 
     expect(screen.getByRole('heading', { name: 'Review your application' })).toBeInTheDocument();
     expect(screen.getByText('Weight, low down.')).toBeInTheDocument();
-    expect(screen.getByText('Second year')).toBeInTheDocument();
+    expect(screen.getByText('2nd')).toBeInTheDocument();
     expect(screen.getByText('cv.pdf')).toBeInTheDocument();
     expect(submit).not.toHaveBeenCalled();
   });

@@ -14,7 +14,6 @@ import { DraftNotice } from './draft-notice';
 import { ErrorSummary } from './error-summary';
 import { IdentitySection } from './identity-section';
 import { QuestionList } from './question-field';
-import { ResumeUpload } from './resume-upload';
 import { ReviewSection } from './review-section';
 import { SectionRail } from './section-rail';
 import { formSections } from './sections';
@@ -25,6 +24,7 @@ import { useActiveSection } from './use-active-section';
 import {
   coreFieldId,
   emptyFormState,
+  programSurvivesFacultyChange,
   rankedSlugs,
   type ApplyData,
   type ApplyPosting,
@@ -259,12 +259,7 @@ export function ApplyForm({
         */}
         <div className="hidden lg:block">
           {phase === 'form' ? (
-            <SectionRail
-              sections={sections}
-              activeId={activeId}
-              onNavigate={onNavigate}
-              applyingTo={selectedPostings.map((posting) => posting.teamName)}
-            />
+            <SectionRail sections={sections} activeId={activeId} onNavigate={onNavigate} />
           ) : null}
         </div>
 
@@ -279,10 +274,24 @@ export function ApplyForm({
                 name={state.name}
                 email={state.email}
                 yearOfStudy={state.yearOfStudy}
+                faculty={state.faculty}
                 homeDepartment={state.homeDepartment}
+                resume={state.resume}
                 errors={fieldErrors}
                 disabled={submitting}
-                onChange={(field, value) => update((previous) => ({ ...previous, [field]: value }))}
+                onChange={(field, value) =>
+                  update((previous) =>
+                    // Changing the faculty can change what the program field
+                    // even is — a dropdown of engineering codes, or a free text
+                    // box — so a program that no longer belongs to it is
+                    // dropped rather than left sitting in a control that cannot
+                    // show it.
+                    field === 'faculty' && !programSurvivesFacultyChange(previous.faculty, value)
+                      ? { ...previous, faculty: value, homeDepartment: '' }
+                      : { ...previous, [field]: value },
+                  )
+                }
+                onResumeChange={(resume) => update((previous) => ({ ...previous, resume }))}
               />
 
               {visibleCoreQuestions(data, state).length > 0 ? (
@@ -360,13 +369,6 @@ export function ApplyForm({
                   }
                 />
               ))}
-
-              <ResumeUpload
-                resume={state.resume}
-                error={fieldErrors.get('resume-upload')}
-                disabled={submitting}
-                onChange={(resume) => update((previous) => ({ ...previous, resume }))}
-              />
             </div>
           )}
 
@@ -465,6 +467,7 @@ export function buildSubmission(data: ApplyData, state: FormState, honeypot = ''
     name: state.name.trim(),
     email: state.email.trim(),
     yearOfStudy: state.yearOfStudy,
+    faculty: state.faculty,
     homeDepartment: state.homeDepartment.trim(),
     resumePath: state.resume?.path ?? null,
     honeypot,

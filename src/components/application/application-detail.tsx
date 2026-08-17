@@ -76,7 +76,13 @@ export function ApplicationDetailView({
           </div>
 
           <div className="flex gap-2">
-            <dt className="text-muted-foreground">Department</dt>
+            <dt className="text-muted-foreground">Faculty</dt>
+            {/* Empty only on a row written before the column existed. */}
+            <dd>{detail.faculty || '—'}</dd>
+          </div>
+
+          <div className="flex gap-2">
+            <dt className="text-muted-foreground">Program</dt>
             <dd>{detail.homeDepartment}</dd>
           </div>
 

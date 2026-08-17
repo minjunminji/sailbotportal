@@ -69,6 +69,9 @@ export type FormState = {
   email: string;
   /** Ordinal, matching `applications.year_of_study`. */
   yearOfStudy: string;
+  /** One of `FACULTY_OPTIONS`, matching `applications.faculty`. */
+  faculty: string;
+  /** Program or major, matching `applications.home_department`. */
   homeDepartment: string;
   coreAnswers: AnswerMap;
   /** Keyed by posting slug. Every open posting has an entry from the start. */
@@ -79,48 +82,82 @@ export type FormState = {
 
 /**
  * The ordinals `applications.year_of_study` holds, with labels a student
- * recognises. The stored value is the ordinal, so 'Fourth year' can be reworded
- * without rewriting a column.
+ * recognises. The stored value is the ordinal, so '4th' can be reworded without
+ * rewriting a column.
+ *
+ * Written as ordinals rather than as 'Fourth year': the field is one of three
+ * sharing a row, and the label above it already says what the number counts.
  */
 export const YEAR_OF_STUDY_OPTIONS: { value: string; label: string }[] = [
-  { value: '1', label: 'First year' },
-  { value: '2', label: 'Second year' },
-  { value: '3', label: 'Third year' },
-  { value: '4', label: 'Fourth year' },
-  { value: '5', label: 'Fifth year or beyond' },
+  { value: '1', label: '1st' },
+  { value: '2', label: '2nd' },
+  { value: '3', label: '3rd' },
+  { value: '4', label: '4th' },
+  { value: '5', label: '5th or beyond' },
   { value: 'masters', label: "Master's" },
   { value: 'phd', label: 'PhD' },
 ];
 
 /**
- * Suggestions, not a closed list.
+ * The faculties an applicant may choose, most likely first rather than
+ * alphabetically: nearly every applicant is in the first two.
  *
- * Free text alone fragments into 'CPEN', 'comp eng' and 'Computer Engineering'
- * within one recruiting cycle, which breaks grouping in the export; a closed
- * list would turn away every department nobody thought of. The combobox offers
- * these and accepts anything.
+ * A closed list, and the server enforces the same one. Unlike a program, a
+ * faculty is a short fixed set that does not change between recruiting cycles,
+ * so free text here would only ever produce 'APSC', 'Engineering' and 'applied
+ * sci' meaning one thing.
  */
-export const DEPARTMENT_SUGGESTIONS: string[] = [
-  'APSC — General/Undeclared Engineering',
-  'BMEG — Biomedical Engineering',
-  'CHBE — Chemical and Biological Engineering',
-  'CIVL — Civil Engineering',
-  'CPEN — Computer Engineering',
-  'CPSC — Computer Science',
-  'ELEC — Electrical Engineering',
-  'ENPH — Engineering Physics',
-  'ENVE — Environmental Engineering',
-  'GEOE — Geological Engineering',
-  'IGEN — Integrated Engineering',
-  'MANU — Manufacturing Engineering',
-  'MATH — Mathematics',
-  'MECH — Mechanical Engineering',
-  'MINE — Mining Engineering',
-  'MTRL — Materials Engineering',
-  'PHYS — Physics',
-  'COMM — Commerce',
-  'STAT — Statistics',
+export const FACULTY_OPTIONS: string[] = [
+  'Applied Science',
+  'Science',
+  'Arts',
+  'Business',
+  'Law',
+  'Forestry',
 ];
+
+/** The one faculty whose programs are asked as a closed list. */
+export const APPLIED_SCIENCE = 'Applied Science';
+
+/**
+ * Engineering programs, by code, alphabetically.
+ *
+ * The stored value is the CODE alone, which is what the board card and every
+ * export group on. Applied Science is the only faculty that gets a closed list,
+ * because it is the only one where four-letter codes are what students call
+ * their program — a Science student says 'Biology', not 'BIOL'.
+ *
+ * 'APSC' is first-year and undeclared engineering, which is a large share of
+ * applicants and has no program code of its own yet.
+ */
+export const APPLIED_SCIENCE_PROGRAMS: { code: string; name: string }[] = [
+  { code: 'APSC', name: 'First year / undeclared' },
+  { code: 'BMEG', name: 'Biomedical Engineering' },
+  { code: 'CHBE', name: 'Chemical and Biological Engineering' },
+  { code: 'CIVL', name: 'Civil Engineering' },
+  { code: 'CPEN', name: 'Computer Engineering' },
+  { code: 'ELEC', name: 'Electrical Engineering' },
+  { code: 'ENPH', name: 'Engineering Physics' },
+  { code: 'ENVE', name: 'Environmental Engineering' },
+  { code: 'GEOL', name: 'Geological Engineering' },
+  { code: 'IGEN', name: 'Integrated Engineering' },
+  { code: 'MECH', name: 'Mechanical Engineering' },
+  { code: 'MINE', name: 'Mining Engineering' },
+  { code: 'MTRL', name: 'Materials Engineering' },
+];
+
+/**
+ * Whether a program typed under one faculty still means anything under another.
+ *
+ * It does not when the switch crosses Applied Science in either direction: the
+ * field changes between a code list and free text, so 'MECH' would sit in a box
+ * that now expects 'Biology', or 'Biology' would sit in a dropdown that cannot
+ * show it. Within the free-text faculties the answer is kept — someone
+ * correcting Arts to Science has not changed what they study.
+ */
+export function programSurvivesFacultyChange(previous: string, next: string): boolean {
+  return (previous === APPLIED_SCIENCE) === (next === APPLIED_SCIENCE);
+}
 
 /** Every question in the form, in the order the server would resolve them. */
 export function allQuestions(data: ApplyData): Question[] {
@@ -136,6 +173,7 @@ export function emptyFormState(data: ApplyData): FormState {
     name: '',
     email: '',
     yearOfStudy: '',
+    faculty: '',
     homeDepartment: '',
     coreAnswers: {},
     teams: Object.fromEntries(data.postings.map((posting) => [posting.slug, emptyTeamState()])),
@@ -157,6 +195,7 @@ export const SHARED_FIELD_IDS: Record<string, string> = {
   name: 'applicant-name',
   email: 'applicant-email',
   yearOfStudy: 'applicant-year',
+  faculty: 'applicant-faculty',
   homeDepartment: 'applicant-department',
   resumePath: 'resume-upload',
   teams: 'team-selection',

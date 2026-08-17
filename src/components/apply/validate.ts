@@ -3,6 +3,8 @@ import type { SubmissionIssue } from '@/app/actions/submit-application';
 import { buildAnswerSchema } from '@/lib/questions/schema';
 import type { AnswerMap, Question } from '@/lib/questions/types';
 import {
+  APPLIED_SCIENCE,
+  FACULTY_OPTIONS,
   SHARED_FIELD_IDS,
   YEAR_OF_STUDY_OPTIONS,
   coreFieldId,
@@ -22,7 +24,7 @@ import {
  * rule about a question; if a rule needs changing it changes in
  * `@/lib/questions/schema` and both sides move together.
  *
- * The four identity fields are the exception. Their schema lives inside a
+ * The five identity fields are the exception. Their schema lives inside a
  * `'use server'` module, which may export only async functions, so it cannot be
  * imported here. The checks below are deliberately the weakest ones that give
  * useful feedback — presence, and an email that looks like one — and the server
@@ -50,9 +52,10 @@ export function errorMap(errors: FieldError[]): ErrorMap {
 }
 
 const YEAR_VALUES = new Set(YEAR_OF_STUDY_OPTIONS.map((option) => option.value));
+const FACULTY_VALUES = new Set(FACULTY_OPTIONS);
 
 /**
- * Exported so the section rail can count the same four fields by the same
+ * Exported so the section rail can count the same five fields by the same
  * rules. A second notion of "this field is filled in" would let the rail call a
  * section complete that the summary then refuses.
  */
@@ -86,11 +89,21 @@ export function identityErrors(state: FormState): FieldError[] {
     });
   }
 
+  if (!FACULTY_VALUES.has(state.faculty)) {
+    errors.push({
+      fieldId: SHARED_FIELD_IDS.faculty,
+      label: 'Faculty',
+      message: 'Choose your faculty',
+    });
+  }
+
   if (state.homeDepartment.trim() === '') {
     errors.push({
       fieldId: SHARED_FIELD_IDS.homeDepartment,
-      label: 'Home department',
-      message: 'Enter your home department',
+      label: 'Program or major',
+      // Applied Science picks from a list; every other faculty types it.
+      message:
+        state.faculty === APPLIED_SCIENCE ? 'Choose your program' : 'Enter your program or major',
     });
   }
 
@@ -296,8 +309,10 @@ function labelForShared(field: string): string {
       return 'Email';
     case 'yearOfStudy':
       return 'Year of study';
+    case 'faculty':
+      return 'Faculty';
     case 'homeDepartment':
-      return 'Home department';
+      return 'Program or major';
     case 'resumePath':
       return 'Resume';
     default:

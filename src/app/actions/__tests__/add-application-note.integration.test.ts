@@ -63,6 +63,7 @@ async function makeApplication(postingId: string, email: string): Promise<string
       applicant_name: 'Notes Applicant',
       applicant_email: email,
       year_of_study: '3',
+      faculty: 'Science',
       home_department: 'CPSC',
       ranked_subteams: [],
       question_schema_snapshot: [],

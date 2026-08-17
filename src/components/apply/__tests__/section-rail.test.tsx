@@ -23,7 +23,7 @@ function renderRail(
   sections: FormSection[],
   props: Partial<Parameters<typeof SectionRail>[0]> = {},
 ) {
-  return render(<SectionRail sections={sections} activeId={null} applyingTo={[]} {...props} />);
+  return render(<SectionRail sections={sections} activeId={null} {...props} />);
 }
 
 it('is a landmark a screen reader can jump to', () => {
@@ -81,19 +81,16 @@ it('does not announce trouble before anything has been submitted', () => {
   expect(screen.queryByText(/needs attention/i)).not.toBeInTheDocument();
 });
 
-describe('footer', () => {
-  it('names the teams the application currently covers', () => {
-    renderRail([section()], { applyingTo: ['Mechanical', 'Software'] });
-    expect(screen.getByText(/Applying to Mechanical, Software/)).toBeInTheDocument();
-  });
+it('holds no action of its own — the rail navigates and nothing else', () => {
+  renderRail([section()]);
+  expect(screen.queryByRole('button')).not.toBeInTheDocument();
+});
 
-  it('says so plainly when no team has been chosen', () => {
-    renderRail([section()], { applyingTo: [] });
-    expect(screen.getByText(/No teams chosen yet/)).toBeInTheDocument();
-  });
-
-  it('holds no action of its own — the rail navigates and nothing else', () => {
-    renderRail([section()]);
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
-  });
+// The rows ARE the rail. A footer naming the chosen teams said what the rows
+// already say, and the form's submit line says it again beside the button.
+it('carries nothing below the rows', () => {
+  renderRail([section(), section({ id: 'resume-upload', label: 'Resume', total: 1 })]);
+  const rail = screen.getByRole('navigation', { name: 'Application sections' });
+  expect(rail.children).toHaveLength(1);
+  expect(rail.firstElementChild?.tagName).toBe('UL');
 });

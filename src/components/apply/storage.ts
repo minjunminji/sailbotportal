@@ -23,7 +23,7 @@ import { emptyFormState, emptyTeamState, type ApplyData, type FormState } from '
  * Bump when the persisted shape changes. The key carries it, so an old draft is
  * simply never read rather than needing a migration.
  */
-export const FORM_VERSION = 1;
+export const FORM_VERSION = 2;
 
 export const DRAFT_KEY = `sailbot-apply-draft-v${FORM_VERSION}`;
 
@@ -39,6 +39,7 @@ type Draft = {
   name: string;
   email: string;
   yearOfStudy: string;
+  faculty: string;
   homeDepartment: string;
   coreAnswers: AnswerMap;
   teams: Record<string, DraftTeam>;
@@ -85,6 +86,7 @@ export function saveDraft(data: ApplyData, state: FormState): void {
     name: state.name,
     email: state.email,
     yearOfStudy: state.yearOfStudy,
+    faculty: state.faculty,
     homeDepartment: state.homeDepartment,
     coreAnswers: withoutFiles(state.coreAnswers, fileIds),
     teams: Object.fromEntries(
@@ -164,6 +166,7 @@ export function loadDraft(data: ApplyData): FormState | null {
   state.name = asString(draft.name);
   state.email = asString(draft.email);
   state.yearOfStudy = asString(draft.yearOfStudy);
+  state.faculty = asString(draft.faculty);
   state.homeDepartment = asString(draft.homeDepartment);
   state.coreAnswers = asAnswerMap(draft.coreAnswers, fileIds);
 

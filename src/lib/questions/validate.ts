@@ -88,7 +88,14 @@ const longText = z.strictObject({
 const select = z.strictObject({
   ...base,
   type: z.literal('select'),
-  config: z.strictObject({ options: labelList('options') }),
+  config: z
+    .strictObject({ options: labelList('options'), confirm: z.boolean().optional() })
+    // A checkbox answers only `options[0]`; a third or first option nobody can
+    // reach is the same class of mistake as a `maxChoices` past the option
+    // list — silent everywhere except the screen the applicant is looking at.
+    .refine((config) => !config.confirm || config.options.length === 2, {
+      message: 'config.confirm requires exactly two options',
+    }),
 });
 
 const multiSelect = z.strictObject({

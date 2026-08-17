@@ -124,6 +124,7 @@ export type Database = {
           applicant_email: string
           applicant_name: string
           assigned_subteam_id: string | null
+          faculty: string
           first_choice_subteam_id: string | null
           home_department: string
           id: string
@@ -143,6 +144,7 @@ export type Database = {
           applicant_email: string
           applicant_name: string
           assigned_subteam_id?: string | null
+          faculty: string
           first_choice_subteam_id?: string | null
           home_department: string
           id?: string
@@ -162,6 +164,7 @@ export type Database = {
           applicant_email?: string
           applicant_name?: string
           assigned_subteam_id?: string | null
+          faculty?: string
           first_choice_subteam_id?: string | null
           home_department?: string
           id?: string

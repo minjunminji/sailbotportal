@@ -132,6 +132,7 @@ async function insertApplication(opts: { postingId: string; email: string; snaps
       applicant_name: 'Snapshot Applicant',
       applicant_email: opts.email,
       year_of_study: '2',
+      faculty: 'Applied Science',
       home_department: 'MECH',
       answers: { ballast: 'It keeps the boat upright.' },
       question_schema_snapshot: opts.snapshot,

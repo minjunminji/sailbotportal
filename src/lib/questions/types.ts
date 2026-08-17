@@ -74,6 +74,15 @@ export type LongTextConfig = {
 
 export type SelectConfig = {
   options: string[];
+  /**
+   * Render as a single checkbox instead of a dropdown, for a two-option
+   * Yes/No question phrased as a statement to agree with ("I confirm that
+   * I am available..."). The question's own label doubles as the checkbox's
+   * label, checking it answers `options[0]`, and leaving it unchecked answers
+   * nothing — this is a box to check, not a menu with two genuine choices in
+   * it. Only meaningful when `options` has exactly two entries.
+   */
+  confirm?: boolean;
 };
 
 export type MultiSelectConfig = {

@@ -159,3 +159,6 @@ runs through the submit path, and it was not worth burying the section-rail diff
 **When it is done:** migrate existing `draft` rows to `closed`, change the check constraint, and add
 the empty-state line to `/admin/postings` in the same change — otherwise the regression above ships
 on its own.
+
+
+weighted scores for SOFT based on subteam. it'd calculate a score based on the 1-5 profieincy self-ratings for each skill in the skills section, and then calculate an overall team match score based on those skill scores. e.g. NET would have higher weight for low level, WEB would weigh web dev skills more, etc.

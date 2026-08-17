@@ -61,7 +61,8 @@ export function ReviewSection({
           <ReviewItem label="Full name" value={state.name} />
           <ReviewItem label="Email" value={state.email} />
           <ReviewItem label="Year of study" value={yearLabel} />
-          <ReviewItem label="Home department" value={state.homeDepartment} />
+          <ReviewItem label="Faculty" value={state.faculty} />
+          <ReviewItem label="Program or major" value={state.homeDepartment} />
           <ReviewItem label="Resume" value={state.resume?.filename ?? ''} />
         </ReviewGroup>
 

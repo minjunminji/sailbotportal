@@ -93,10 +93,9 @@ function rankingFloor(posting: ApplyPosting): number {
 function sectionByFieldId(data: ApplyData): Map<string, string> {
   const map = new Map<string, string>();
 
-  for (const field of ['name', 'email', 'yearOfStudy', 'homeDepartment']) {
+  for (const field of ['name', 'email', 'yearOfStudy', 'faculty', 'homeDepartment', 'resumePath']) {
     map.set(SHARED_FIELD_IDS[field], 'about-you');
   }
-  map.set(SHARED_FIELD_IDS.resumePath, 'resume-upload');
   map.set(SHARED_FIELD_IDS.teams, 'team-selection');
 
   for (const question of data.coreQuestions) {
@@ -141,8 +140,10 @@ export function formSections(
   sections.push({
     id: 'about-you',
     label: 'About you',
-    answered: 4 - identityErrors(state).length,
-    total: 4,
+    // The resume counts alongside the five identity fields: it is a fact about
+    // the applicant, asked in the same section, not a step of its own.
+    answered: 5 - identityErrors(state).length + (state.resume ? 1 : 0),
+    total: 6,
   });
 
   // Asked once for the whole form. Omitted entirely when the org asks none,
@@ -188,13 +189,6 @@ export function formSections(
       total: progress.total + (floor > 0 ? 1 : 0),
     });
   }
-
-  sections.push({
-    id: 'resume-upload',
-    label: 'Resume',
-    answered: state.resume ? 1 : 0,
-    total: 1,
-  });
 
   return sections.map((section) => ({
     ...section,

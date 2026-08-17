@@ -42,16 +42,22 @@ export function describedBy(
   return ids.length > 0 ? ids.join(' ') : undefined;
 }
 
-export function RequiredMark({ required }: { required: boolean }) {
-  if (!required) return <span className="ml-2 text-sm text-muted-foreground">(optional)</span>;
-  return (
-    <>
-      <span aria-hidden="true" className="ml-1 text-destructive">
-        *
-      </span>
-      <span className="sr-only"> (required)</span>
-    </>
-  );
+/**
+ * '(optional)', or nothing at all.
+ *
+ * ONLY THE EXCEPTION IS MARKED. Nearly every question on this form is required,
+ * so an asterisk beside each of them marked forty questions to distinguish four
+ * — a legend the applicant has to read past on every line to learn what they
+ * could have assumed. The optional ones say so, and everything else is required
+ * by default.
+ *
+ * Nothing is lost to a screen reader: the controls carry `required`, which is
+ * what announces the field as required, and it did that while the asterisk was
+ * here too.
+ */
+export function OptionalMark({ required }: { required: boolean }) {
+  if (required) return null;
+  return <span className="ml-2 text-sm text-muted-foreground">(optional)</span>;
 }
 
 export function QuestionShell({
@@ -79,7 +85,7 @@ export function QuestionShell({
   const label = (
     <>
       {question.label}
-      <RequiredMark required={question.required} />
+      <OptionalMark required={question.required} />
     </>
   );
 

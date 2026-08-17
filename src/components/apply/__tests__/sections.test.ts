@@ -48,7 +48,6 @@ describe('which rows exist', () => {
       'about-you',
       'shared-questions',
       'team-selection',
-      'resume-upload',
     ]);
   });
 
@@ -59,7 +58,6 @@ describe('which rows exist', () => {
       'shared-questions',
       'team-selection',
       'answers-mech-2026',
-      'resume-upload',
     ]);
   });
 
@@ -79,7 +77,6 @@ describe('which rows exist', () => {
       'team-selection',
       'answers-mech-2026',
       'answers-soft-2026',
-      'resume-upload',
     ]);
   });
 
@@ -90,11 +87,11 @@ describe('which rows exist', () => {
 });
 
 describe('what the count counts', () => {
-  it('counts the four identity fields in About you', () => {
+  it('counts the five identity fields plus the resume in About you', () => {
     const data = twoTeams();
     expect(section(data, emptyFormState(data), 'about-you')).toMatchObject({
       answered: 0,
-      total: 4,
+      total: 6,
     });
   });
 
@@ -162,13 +159,13 @@ describe('what counts as answered', () => {
     expect(section(data, withTeam(data, 'mech-2026', true), 'team-selection').answered).toBe(1);
   });
 
-  it('treats an uploaded resume as answering Resume', () => {
+  it('counts an uploaded resume as one more answer in About you', () => {
     const data = twoTeams();
     const state = emptyFormState(data);
-    expect(section(data, state, 'resume-upload').answered).toBe(0);
+    expect(section(data, state, 'about-you').answered).toBe(0);
 
     state.resume = { path: 'resume/x.pdf', filename: 'cv.pdf', size: 10 };
-    expect(section(data, state, 'resume-upload').answered).toBe(1);
+    expect(section(data, state, 'about-you').answered).toBe(1);
   });
 });
 

@@ -40,11 +40,17 @@ export function LongTextField({
     (maxWords !== undefined && words > maxWords);
   const countId = parts.length > 0 ? `${fieldId}-count` : undefined;
 
+  // A ceiling stated in words is a ceiling on how much room the box needs to
+  // offer. Six rows fits a paragraph; a question capped at 30 words wants a
+  // sentence or two, and a box sized for a paragraph past that point just
+  // asks the applicant to scroll inside a scrolling page.
+  const rows = maxWords !== undefined ? Math.min(6, Math.max(2, Math.ceil(maxWords / 10))) : 6;
+
   return (
     <QuestionShell question={question} fieldId={fieldId} error={error}>
       <textarea
         id={inputId(fieldId)}
-        rows={6}
+        rows={rows}
         value={text}
         disabled={disabled}
         aria-required={question.required || undefined}
