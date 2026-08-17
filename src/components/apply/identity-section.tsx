@@ -32,9 +32,6 @@ export function IdentitySection({
       <h2 id="about-you-heading" className="text-lg font-semibold">
         About you
       </h2>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Asked once. Every team you apply to sees the same answers.
-      </p>
 
       <div className="mt-6 flex flex-col gap-6">
         <Field

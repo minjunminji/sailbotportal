@@ -291,35 +291,23 @@ export function ApplyForm({
               />
 
               {visibleCoreQuestions(data, state).length > 0 ? (
-                <section
-                  id="shared-questions"
-                  aria-labelledby="shared-questions-heading"
-                  className="scroll-mt-8"
-                >
-                  <h2 id="shared-questions-heading" className="text-lg font-semibold">
-                    About your interest in Sailbot
-                  </h2>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Asked once, whichever teams you apply to.
-                  </p>
-                  <div className="mt-6">
-                    <QuestionList
-                      questions={visibleCoreQuestions(data, state)}
-                      fieldIdFor={coreFieldId}
-                      answers={state.coreAnswers}
-                      errors={fieldErrors}
-                      disabled={submitting}
-                      // A core `file` question would be resolved against any open
-                      // posting; the route checks the question really belongs to it.
-                      uploadPostingSlug={data.postings[0]?.slug ?? ''}
-                      onAnswer={(questionId, value) =>
-                        update((previous) => ({
-                          ...previous,
-                          coreAnswers: writeAnswer(previous.coreAnswers, questionId, value),
-                        }))
-                      }
-                    />
-                  </div>
+                <section id="shared-questions" className="scroll-mt-8">
+                  <QuestionList
+                    questions={visibleCoreQuestions(data, state)}
+                    fieldIdFor={coreFieldId}
+                    answers={state.coreAnswers}
+                    errors={fieldErrors}
+                    disabled={submitting}
+                    // A core `file` question would be resolved against any open
+                    // posting; the route checks the question really belongs to it.
+                    uploadPostingSlug={data.postings[0]?.slug ?? ''}
+                    onAnswer={(questionId, value) =>
+                      update((previous) => ({
+                        ...previous,
+                        coreAnswers: writeAnswer(previous.coreAnswers, questionId, value),
+                      }))
+                    }
+                  />
                 </section>
               ) : null}
 

@@ -177,14 +177,7 @@ export default async function ApplyPage() {
           </Link>
         </div>
       ) : (
-        <>
-          <p className="mt-3 max-w-3xl text-base text-muted-foreground">
-            One application covers every team. Answer a short set of shared questions, say which
-            teams you want to apply to, and answer the questions those teams ask. Your answers are
-            saved on this device as you type, so you can come back to them.
-          </p>
-          <ApplyForm data={data} submit={submitApplication} />
-        </>
+        <ApplyForm data={data} submit={submitApplication} />
       )}
     </main>
   );
