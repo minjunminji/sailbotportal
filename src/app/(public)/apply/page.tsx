@@ -179,7 +179,7 @@ export default async function ApplyPage() {
           </div>
           <Link
             href="/"
-            className="mt-6 inline-block rounded-md px-2 py-1 text-base underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+            className="mt-6 inline-block rounded-md px-2 py-1 text-base underline underline-offset-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Back to open postings
           </Link>

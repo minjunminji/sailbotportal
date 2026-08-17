@@ -62,7 +62,7 @@ export function DraftNotice({
         <button
           type="button"
           onClick={onStartOver}
-          className="rounded-sm text-sm font-medium underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+          className="rounded-sm text-sm font-medium underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           Start over
         </button>
@@ -71,7 +71,7 @@ export function DraftNotice({
           type="button"
           onClick={onDismiss}
           aria-label="Dismiss"
-          className="rounded-md p-2 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+          className="rounded-md p-2 text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <CloseIcon />
         </button>

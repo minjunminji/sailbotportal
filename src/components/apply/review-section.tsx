@@ -125,7 +125,7 @@ export function ReviewSection({
       <button
         type="button"
         onClick={onEdit}
-        className="mt-8 rounded-md border border-border px-4 py-2 text-base font-medium focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+        className="mt-8 rounded-md border border-border px-4 py-2 text-base font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         Back to the form
       </button>

@@ -80,7 +80,7 @@ function ConfirmField({
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy(fieldId, question, error)}
           onChange={(event) => onChange(event.target.checked ? confirmed : undefined)}
-          className="mt-1 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50"
+          className="mt-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
         />
         <label htmlFor={inputId(fieldId)} className="text-base font-medium">
           {question.label}

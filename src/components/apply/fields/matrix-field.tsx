@@ -107,7 +107,7 @@ export function MatrixField({
                           checked={checked}
                           disabled={disabled}
                           onChange={(event) => toggle(row, column, event.target.checked)}
-                          className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50"
+                          className="focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
                         />
                       </td>
                     );

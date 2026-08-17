@@ -392,7 +392,7 @@ export function ApplyForm({
                 type="button"
                 onClick={handleReview}
                 disabled={submitting}
-                className="rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50"
+                className="rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
               >
                 Review your application
               </button>
@@ -400,7 +400,7 @@ export function ApplyForm({
               <button
                 type="submit"
                 disabled={submitting}
-                className="rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50"
+                className="rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
               >
                 {submitting ? 'Sending…' : 'Submit application'}
               </button>

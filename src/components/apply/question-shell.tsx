@@ -132,11 +132,11 @@ export function QuestionShell({
 /** Shared input chrome. Colours resolve through tokens, never a literal. */
 export const controlClasses =
   'w-full rounded-md border border-input bg-background px-3 py-2 text-base ' +
-  'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background ' +
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
   'disabled:opacity-50';
 
 /** A small secondary action: move up, remove, clear a row. */
 export const smallButtonClasses =
   'rounded-md border border-border px-3 py-2 text-sm font-medium ' +
-  'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background ' +
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
   'disabled:opacity-50';

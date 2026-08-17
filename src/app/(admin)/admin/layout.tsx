@@ -51,7 +51,7 @@ export default async function AdminLayout({ children }: LayoutProps<'/admin'>) {
           <form action={signOut}>
             <button
               type="submit"
-              className="mt-3 rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+              className="mt-3 rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Sign out
             </button>

@@ -54,7 +54,7 @@ export function ScaleField({
                 checked={selected === point}
                 disabled={disabled}
                 onChange={() => onChange(point)}
-                className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50"
+                className="focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
               />
               <label htmlFor={pointId} className="text-base">
                 {point}

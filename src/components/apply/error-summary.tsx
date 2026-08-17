@@ -43,7 +43,7 @@ export function ErrorSummary({
             <li key={`${error.fieldId}:${error.message}`} className="text-sm">
               <a
                 href={`#${error.fieldId}`}
-                className="rounded-md underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+                className="rounded-md underline underline-offset-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {error.label}: {error.message}
               </a>

@@ -159,7 +159,7 @@ export function Board({
             <button
               type="button"
               onClick={() => setError(null)}
-              className="ml-auto rounded-md border border-border px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+              className="ml-auto rounded-md border border-border px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Dismiss
             </button>

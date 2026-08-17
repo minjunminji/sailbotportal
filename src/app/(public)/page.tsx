@@ -77,7 +77,7 @@ export default async function HomePage() {
             </ul>
             <Link
               href="/apply"
-              className="mt-6 inline-block rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+              className="mt-6 inline-block rounded-md bg-primary px-4 py-2 text-base font-medium text-primary-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Start an application
             </Link>
