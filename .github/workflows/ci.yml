@@ -51,9 +51,16 @@ jobs:
       # flaky (a 502 at the container-restart step) even when every migration
       # applied fine. `supabase start` already runs the migrations; the step
       # below asserts on database state instead, which is the real check.
+      # Queried with psql against the URL the CLI reports, because
+      # `supabase db execute` does not exist — the CLI has diff, dump, lint,
+      # pull, push, reset and start, and nothing that runs a statement. The
+      # original step also sent stderr to /dev/null, so the unknown command
+      # said nothing and the step failed with an empty count and no reason.
+      # Errors are left visible here for that reason.
       - name: Assert reference data landed
         run: |
-          COUNT=$(supabase db execute --query "select count(*) from subteams;" 2>/dev/null | grep -oE '[0-9]+' | tail -1)
+          DB_URL=$(supabase status -o env | grep '^DB_URL=' | cut -d= -f2- | tr -d '"')
+          COUNT=$(psql "$DB_URL" -tAc "select count(*) from subteams;")
           echo "subteams=$COUNT"
           test "$COUNT" = "12"
 
