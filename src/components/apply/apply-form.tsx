@@ -10,6 +10,7 @@ import type {
 import { isQuestionVisible } from '@/lib/questions/schema';
 import type { Answer, AnswerMap, Question } from '@/lib/questions/types';
 import { Confirmation } from './confirmation';
+import { DraftNotice } from './draft-notice';
 import { ErrorSummary } from './error-summary';
 import { IdentitySection } from './identity-section';
 import { QuestionList } from './question-field';
@@ -77,6 +78,10 @@ export function ApplyForm({
   /** Null until something is typed; the draft (or an empty form) shows through. */
   const [edited, setEdited] = useState<FormState | null>(null);
   const [startedOver, setStartedOver] = useState(false);
+  // Per mount, deliberately. A reload restores the draft again, which makes the
+  // notice true again — remembering the dismissal would hide it from someone
+  // meeting a full form for what is, to them, the first time.
+  const [noticeDismissed, setNoticeDismissed] = useState(false);
   const state = edited ?? draft ?? initial;
   const hadDraft = draft !== null && !startedOver;
 
@@ -232,25 +237,17 @@ export function ApplyForm({
         </ErrorSummary>
       </div>
 
-      {hadDraft && phase === 'form' ? (
-        <div className="mt-6 rounded-lg border border-border bg-card p-4 text-card-foreground">
-          <p className="text-sm text-muted-foreground">
-            We restored what you had already written on this device.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              clearDraft();
-              setEdited(initial);
-              setStartedOver(true);
-              setErrors([]);
-              setFailure(null);
-            }}
-            className="mt-2 rounded-md border border-border px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
-          >
-            Start over
-          </button>
-        </div>
+      {hadDraft && !noticeDismissed && phase === 'form' ? (
+        <DraftNotice
+          onDismiss={() => setNoticeDismissed(true)}
+          onStartOver={() => {
+            clearDraft();
+            setEdited(initial);
+            setStartedOver(true);
+            setErrors([]);
+            setFailure(null);
+          }}
+        />
       ) : null}
 
       <div className="mt-8 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-12">
