@@ -128,7 +128,7 @@ describe('conditional questions', () => {
     await chooseTeam(user, 'Software');
     await user.click(screen.getByRole('button', { name: /Add Pathfinding/ }));
 
-    const ranking = screen.getByRole('group', { name: /subteams are you most interested in/ });
+    const ranking = screen.getByRole('group', { name: /subteams you're interested in/ });
     const question = screen.getByLabelText(/What is a heuristic/);
 
     expect(ranking.compareDocumentPosition(question) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(

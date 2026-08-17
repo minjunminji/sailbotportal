@@ -55,10 +55,29 @@ export function removeChoice(selected: string[], key: string): string[] {
   return selected.filter((entry) => entry !== key);
 }
 
+/**
+ * How many to pick, as one phrase for the caller's own label to carry.
+ *
+ * "Up to 2" invites one and then the submit button refuses it, so where the
+ * floor meets the ceiling this names the exact number the form will accept.
+ * It lives here, beside the rules it describes, but the list does not render it
+ * — a control that states its own instruction underneath whatever heading the
+ * caller already wrote says the same thing twice.
+ */
+export function choiceCountPhrase(
+  minChoices: number,
+  maxChoices: number,
+  itemNoun: string,
+): string {
+  const plural = maxChoices === 1 ? itemNoun : `${itemNoun}s`;
+  return minChoices >= maxChoices
+    ? `the top ${maxChoices} ${plural}`
+    : `up to ${maxChoices} ${plural}`;
+}
+
 export function OrderedChoiceList({
   choices,
   selected,
-  minChoices = 0,
   maxChoices,
   onChange,
   idPrefix,
@@ -67,8 +86,6 @@ export function OrderedChoiceList({
 }: {
   choices: Choice[];
   selected: string[];
-  /** Only affects the wording; the floor itself is enforced by `validate`. */
-  minChoices?: number;
   maxChoices: number;
   onChange: (next: string[]) => void;
   /** Namespaces the generated ids; must be unique on the page. */
@@ -83,17 +100,6 @@ export function OrderedChoiceList({
 
   return (
     <div>
-      {/*
-        "Up to 2" invites one and then the submit button refuses it. Where the
-        floor meets the ceiling the instruction has to name the exact number the
-        form will accept.
-      */}
-      <p className="text-sm text-muted-foreground">
-        {minChoices >= maxChoices
-          ? `Choose ${maxChoices}, most preferred first.`
-          : `Choose up to ${maxChoices}, most preferred first.`}
-      </p>
-
       {/*
         HEARD, NOT SEEN. The numbered badges say this on screen, so printing it
         again as prose was the same answer twice. It stays in the DOM as a live

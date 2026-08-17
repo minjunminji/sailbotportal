@@ -38,16 +38,29 @@ function setup(maxChoices: number, selected: string[] = [], minChoices = 0) {
 }
 
 describe('how many to choose', () => {
-  it('asks for a range when the floor is lower than the ceiling', () => {
-    setup(3, [], 1);
-    expect(screen.getByText('Choose up to 3, most preferred first.')).toBeInTheDocument();
-  });
-
   it('asks for an exact count when the floor meets the ceiling', () => {
     // "up to 2" invites one, and then the submit button refuses it. The
     // instruction has to say what the form will actually accept.
     setup(2, [], 2);
-    expect(screen.getByText('Choose 2, most preferred first.')).toBeInTheDocument();
+    expect(
+      screen.getByRole('group', { name: "Select the top 2 subteams you're interested in" }),
+    ).toBeInTheDocument();
+  });
+
+  it('asks for a range when the floor is lower than the ceiling', () => {
+    setup(3, [], 1);
+    expect(
+      screen.getByRole('group', { name: "Select up to 3 subteams you're interested in" }),
+    ).toBeInTheDocument();
+  });
+
+  it('says it once, in the legend', () => {
+    // The legend asked which subteams, and a line under it said how many. Two
+    // sentences for one instruction, the second of which repeated the first.
+    setup(2, [], 2);
+
+    expect(screen.queryByText(/most preferred first/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/are you most interested in/)).not.toBeInTheDocument();
   });
 });
 

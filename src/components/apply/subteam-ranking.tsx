@@ -1,6 +1,6 @@
 'use client';
 
-import { OrderedChoiceList } from './ordered-choice-list';
+import { choiceCountPhrase, OrderedChoiceList } from './ordered-choice-list';
 import type { ApplyPosting } from './types';
 
 /**
@@ -42,8 +42,15 @@ export function SubteamRanking({
       aria-describedby={error ? errorId : undefined}
       aria-invalid={error ? true : undefined}
     >
+      {/*
+        The whole instruction, in one line. The legend used to ask which
+        subteams and a line beneath it said how many — two sentences for one
+        question, and the team name was already in the heading above.
+      */}
       <legend className="text-base font-medium">
-        Which {posting.teamName} subteams are you most interested in?
+        Select{' '}
+        {choiceCountPhrase(posting.ranking.minChoices, posting.ranking.maxChoices, 'subteam')}{' '}
+        you&apos;re interested in
       </legend>
       <div className="mt-3">
         <OrderedChoiceList
@@ -56,7 +63,6 @@ export function SubteamRanking({
             description: subteam.description,
           }))}
           selected={selected}
-          minChoices={posting.ranking.minChoices}
           maxChoices={posting.ranking.maxChoices}
           disabled={disabled}
           onChange={onChange}

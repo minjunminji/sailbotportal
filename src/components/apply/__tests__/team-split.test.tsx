@@ -81,7 +81,7 @@ describe("a team's questions", () => {
   it('puts the subteam ranking before the questions it decides the existence of', () => {
     const { container } = questions();
 
-    const ranking = screen.getByText(/subteams are you most interested in/i);
+    const ranking = screen.getByText(/subteams you're interested in/i);
     const firstQuestion = screen.getByText(/Tell us about a project/);
     expect(
       ranking.compareDocumentPosition(firstQuestion) & Node.DOCUMENT_POSITION_FOLLOWING,
