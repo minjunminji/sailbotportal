@@ -9,6 +9,13 @@ jest.mock('@/app/actions/move-application', () => ({
   moveApplication: jest.fn(async () => ({ ok: true })),
 }));
 
+// Likewise a websocket and a signed-in session. Its own timing rules are
+// covered in use-board-realtime.test.tsx; here it is stubbed so rendering the
+// board does not open a connection per test.
+jest.mock('../use-board-realtime', () => ({
+  useBoardRealtime: jest.fn(),
+}));
+
 import { Board } from '../board';
 
 /**
@@ -46,6 +53,7 @@ function renderBoard(cards: BoardCard[] = [card()]) {
   return render(
     <Board
       cards={cards}
+      postingId="posting-soft"
       teamSlug="soft"
       now={NOW}
       subteams={[PATH, NET, HULL]}

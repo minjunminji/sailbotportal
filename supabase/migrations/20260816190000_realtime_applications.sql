@@ -1,0 +1,39 @@
+-- The board is a shared surface, so it has to be a live one.
+--
+-- Several leads work one team's board during recruiting. Without replication
+-- two of them drag the same card in opposite directions and neither sees the
+-- other; the loser's screen keeps showing a candidate in a column they left
+-- minutes ago, and the next move is made against a board that is quietly wrong.
+--
+-- RLS IS WHAT SCOPES DELIVERY, not the subscription. Realtime evaluates the
+-- "leads read own team applications" policy against each record per subscriber,
+-- so a lead subscribed to another team's posting is authorised for nothing and
+-- receives nothing. Verified locally: with the Software lead subscribed, a move
+-- on a Software card arrived and a move on a Mechanical card did not. The
+-- client's `posting_id=eq.<id>` filter is a bandwidth optimisation on top of
+-- that; the policy is the boundary.
+--
+-- NO COLUMN LIST, AND THAT WAS MEASURED RATHER THAN ASSUMED. Postgres 15 lets a
+-- publication name the columns it replicates, and the obvious use here is to
+-- publish only `id` and `posting_id`: an `applications` row is mostly
+-- `answers` and `question_schema_snapshot`, so every status move otherwise
+-- pushes an applicant's essays and their twenty-row skills matrix to every
+-- connected lead — who read none of it, because the board refetches through the
+-- query layer rather than reading the event. Tried it. Realtime delivers the
+-- whole row regardless of the column list, so the narrower publication bought
+-- nothing at the wire and left a second, subtler configuration to explain.
+--
+-- That payload is bandwidth, not exposure: it reaches only subscribers who
+-- already passed the SELECT policy on those exact rows and could fetch the same
+-- data from the detail view. If it ever needs to be small, the fix is
+-- Broadcast from the database — a trigger calling `realtime.broadcast_changes`
+-- with a payload of our own choosing — not this publication.
+--
+-- Replica identity stays DEFAULT. FULL exists to populate `old_record`, which
+-- is a second copy of the row nobody here reads: the board learns *that* an
+-- application changed and refetches, so the previous status is of no use to it.
+--
+-- One caveat for anyone debugging this locally: Realtime caches publication
+-- metadata, so a freshly published table can take a few seconds to start
+-- delivering. An immediate probe reporting zero events is not proof of failure.
+alter publication supabase_realtime add table applications;

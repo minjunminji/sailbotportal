@@ -23,6 +23,7 @@ import { BoardColumn } from './column';
 import { BoardCard } from './card';
 import { boardCollisionDetection, boardCoordinateGetter } from './keyboard';
 import { applyOptimisticMove, resolveMove } from './moves';
+import { useBoardRealtime } from './use-board-realtime';
 
 /**
  * The board itself: eight columns side by side, scrolling horizontally.
@@ -40,12 +41,15 @@ import { applyOptimisticMove, resolveMove } from './moves';
  */
 export function Board({
   cards,
+  postingId,
   teamSlug,
   now,
   subteams,
   boardQuery,
 }: {
   cards: BoardCardData[];
+  /** Which board to subscribe to. See `useBoardRealtime`. */
+  postingId: string;
   teamSlug: string;
   now: string;
   /** Every subteam on this team, for resolving assignments to a name. */
@@ -65,6 +69,10 @@ export function Board({
     (state: BoardCardData[], move: { id: string; status: ApplicationStatus; movedAt: string }) =>
       applyOptimisticMove(state, move, move.movedAt),
   );
+
+  // Held while a card is in the air: a board that resorts mid-drag moves the
+  // drop target away from the cursor.
+  useBoardRealtime({ postingId, paused: draggingId !== null });
 
   const grouped = useMemo(() => groupByStatus(optimisticCards), [optimisticCards]);
   const subteamsById = useMemo(

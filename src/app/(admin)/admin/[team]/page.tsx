@@ -96,6 +96,7 @@ export default async function TeamBoardPage({ params, searchParams }: PageProps<
           nowhere to put them. */}
       <Board
         cards={cards}
+        postingId={posting.id}
         teamSlug={team.slug}
         now={new Date().toISOString()}
         subteams={subteams ?? []}

@@ -28,7 +28,9 @@ export function resolveMove(
   if (!status) return null;
 
   const card = cards.find((entry) => entry.id === activeId);
-  // Realistically: realtime removed the card mid-drag, in a later task.
+  // Reachable in practice: another lead moved this applicant out of the
+  // filtered set while the card was in the air, and the realtime refresh that
+  // followed the drop rebuilt the board without it.
   if (!card) return null;
 
   // Dropping a card back where it started is not a move. Sending it anyway
