@@ -191,6 +191,9 @@ type PostingRow = {
 
 const subteamRankingSchema = z.object({
   enabled: z.boolean().default(false),
+  // Defaults to 0 so a posting written before the floor existed keeps behaving
+  // as it did: a ceiling and no requirement to reach it.
+  minChoices: z.number().int().nonnegative().default(0),
   maxChoices: z.number().int().positive().default(3),
 });
 
@@ -376,6 +379,20 @@ export async function submitApplication(input: SubmissionInput): Promise<SubmitR
         posting: posting.slug,
         field: 'rankedSubteams',
         message: `Rank at most ${ranking.data.maxChoices} subteams`,
+      });
+      continue;
+    }
+
+    // The floor. Checked against the posting's own config rather than trusting
+    // the form to have done it, for the same reason as every other rule here.
+    if (ranked.length < ranking.data.minChoices) {
+      subteamIssues.push({
+        posting: posting.slug,
+        field: 'rankedSubteams',
+        message:
+          ranking.data.minChoices === 1
+            ? 'Choose your top subteam'
+            : `Choose your top ${ranking.data.minChoices} subteams`,
       });
       continue;
     }

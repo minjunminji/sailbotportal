@@ -120,7 +120,7 @@ export function softwarePosting(questions: Question[] = everyQuestionType): Appl
     teamName: 'Software',
     description: 'We build the autonomy stack.',
     questions,
-    ranking: { enabled: true, maxChoices: 3 },
+    ranking: { enabled: true, minChoices: 1, maxChoices: 3 },
     subteams,
   };
 }
@@ -140,7 +140,7 @@ export function mechanicalPosting(): ApplyPosting {
         config: { maxLength: 1500 },
       },
     ],
-    ranking: { enabled: false, maxChoices: 3 },
+    ranking: { enabled: false, minChoices: 0, maxChoices: 3 },
     subteams: [],
   };
 }

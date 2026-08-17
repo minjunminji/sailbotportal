@@ -72,8 +72,17 @@ function questionProgress(
 }
 
 /** Whether this posting puts a subteam ranking on screen. */
-function ranks(posting: ApplyPosting): boolean {
-  return posting.ranking.enabled && posting.subteams.length > 0;
+/**
+ * How many subteams this posting insists on, or zero.
+ *
+ * Zero means the ranking is offered but not required, so it stays out of the
+ * count entirely — the same rule as an optional question. The count promises
+ * what is left before submitting, and nothing that cannot block a submit
+ * belongs in it.
+ */
+function rankingFloor(posting: ApplyPosting): number {
+  if (!posting.ranking.enabled || posting.subteams.length === 0) return 0;
+  return Math.min(posting.ranking.minChoices, posting.subteams.length);
 }
 
 /**
@@ -168,11 +177,15 @@ export function formSections(
       ranked,
     );
 
+    const floor = rankingFloor(posting);
+
     sections.push({
       id: teamSectionId(posting.slug),
       label: posting.teamName,
-      answered: progress.answered + (ranks(posting) && ranked.length > 0 ? 1 : 0),
-      total: progress.total + (ranks(posting) ? 1 : 0),
+      // A part-filled ranking does not count. The rail may not report progress
+      // the submit button would refuse, and the floor is what submit checks.
+      answered: progress.answered + (floor > 0 && team.rankedSubteams.length >= floor ? 1 : 0),
+      total: progress.total + (floor > 0 ? 1 : 0),
     });
   }
 

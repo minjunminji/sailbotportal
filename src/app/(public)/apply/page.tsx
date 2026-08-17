@@ -36,7 +36,7 @@ type PostingRow = {
 };
 
 /** Defaults match the column default, so a malformed value fails closed. */
-function readRanking(value: unknown): { enabled: boolean; maxChoices: number } {
+function readRanking(value: unknown): { enabled: boolean; minChoices: number; maxChoices: number } {
   const config = (typeof value === 'object' && value !== null ? value : {}) as Record<
     string,
     unknown
@@ -48,7 +48,15 @@ function readRanking(value: unknown): { enabled: boolean; maxChoices: number } {
     config.maxChoices > 0
       ? config.maxChoices
       : 3;
-  return { enabled, maxChoices };
+  // Absent means no floor, which is how every posting behaved before there was
+  // one. Clamped to the ceiling so a bad pair cannot demand the unreachable.
+  const minChoices =
+    typeof config.minChoices === 'number' &&
+    Number.isInteger(config.minChoices) &&
+    config.minChoices > 0
+      ? Math.min(config.minChoices, maxChoices)
+      : 0;
+  return { enabled, minChoices, maxChoices };
 }
 
 async function loadApplyData(): Promise<ApplyData> {

@@ -109,11 +109,12 @@ describe('conditional questions', () => {
     expect(isQuestionVisible(pathOnlyQuestion, ['pathfinding'])).toBe(true);
     expect(screen.getByLabelText(/What is a heuristic/)).toBeInTheDocument();
 
-    // Pushed to third place, it is outside the top two again.
+    // Dropped and re-picked last, it is outside the top two again. That is the
+    // whole of reordering now the move buttons are gone.
+    await user.click(screen.getByRole('button', { name: /Remove Pathfinding/ }));
     await user.click(screen.getByRole('button', { name: /Add Network Systems/ }));
     await user.click(screen.getByRole('button', { name: /Add Boat Simulator/ }));
-    await user.click(screen.getByRole('button', { name: /Move down Pathfinding/ }));
-    await user.click(screen.getByRole('button', { name: /Move down Pathfinding/ }));
+    await user.click(screen.getByRole('button', { name: /Add Pathfinding/ }));
 
     expect(
       isQuestionVisible(pathOnlyQuestion, ['network-systems', 'boat-simulator', 'pathfinding']),

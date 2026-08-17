@@ -15,8 +15,15 @@ export type ApplySubteam = {
   description: string;
 };
 
+/**
+ * `minChoices` is the floor, `maxChoices` the ceiling; equal values mean an
+ * exact count. The floor exists because the rail always counted the ranking as
+ * a required item while nothing enforced it, so a Software application could be
+ * sent having ranked nothing at all.
+ */
 export type SubteamRanking = {
   enabled: boolean;
+  minChoices: number;
   maxChoices: number;
 };
 

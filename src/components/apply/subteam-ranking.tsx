@@ -56,6 +56,7 @@ export function SubteamRanking({
             description: subteam.description,
           }))}
           selected={selected}
+          minChoices={posting.ranking.minChoices}
           maxChoices={posting.ranking.maxChoices}
           disabled={disabled}
           onChange={onChange}
