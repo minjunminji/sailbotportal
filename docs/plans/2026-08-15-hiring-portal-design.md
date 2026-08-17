@@ -33,6 +33,22 @@ experiences a single form while leads get genuinely separate pipelines, each on 
 Rows created together share a `submission_id`, which is how the admin UI can say "this person also
 applied to Software" without conflating it with a separate application made months later.
 
+### "Posting" is an internal word
+
+**Revised 2026-08-16.** A posting is a team's question set plus whether that team is currently
+accepting applications. It is meaningful to a lead and meaningless to an applicant, who meets only
+Sailbot, then teams, then subteams — three levels they can actually reason about.
+
+So the word appears in the admin UI and the schema and nowhere else. In particular the landing page
+must **not** present postings as a list of job listings: three cards headed "Open postings" that
+cannot be clicked, above a single Apply button, promise a per-posting application flow that does not
+exist and is not wanted. An applicant should meet the teams once, as description, and apply once.
+
+The current landing page does exactly the thing this paragraph forbids, and rebuilding it is
+deferred until the visual design work starts. Noted here because it is an information-architecture
+problem rather than a styling one: a designer restyling that page will make the false affordance
+prettier unless told it is meant to disappear.
+
 **Subteam ranking is per-posting, not universal.** Software asks applicants to rank their top three
 of NET/PATH/SIM/WEB/CTRL/DevOps. Mechanical and Electrical do not rank at all. Postings therefore
 carry ranking config rather than every team being assumed to want it.
@@ -166,9 +182,25 @@ create table postings (
 );
 ```
 
-There is **no recruiting-cycle entity**. Postings are simply open or closed. A **Duplicate posting**
-action clones title, description, requirements and the full question set, which removes the
-re-entry pain each term at a fraction of the cost.
+There is **no recruiting-cycle entity**. Postings are simply open or closed.
+
+**Revised 2026-08-16: there is no posting builder, and no Duplicate posting action.** Question sets
+are authored as migrations, as they are today. A drag-and-drop form designer — question types,
+validation config, `visibleIf` editing, reordering, preview — is the most expensive unbuilt thing on
+this roadmap, and it would be used a handful of times a year by two or three people. The snapshot
+invariant means submitted applications survive posting edits however those edits are made, so a
+builder buys convenience and nothing structural.
+
+Duplicate goes with it. It existed to remove the pain of re-typing a question set into a form each
+term; with no form to type into, duplicating a posting is a SQL statement rather than a feature.
+
+**The one admin control that must exist is open/close.** If closing applications requires a migration
+and a deploy, every cycle boundary needs a developer free on the right evening — and this is a
+student team whose developers graduate. That is a status control on the postings screen, which
+already lists every posting and its status, not a builder.
+
+None of this changes the schema. `postings.question_schema` stays exactly as it is; it is written by
+migration rather than by a screen, so the decision stays cheap to revisit.
 
 ### applications
 
@@ -275,8 +307,9 @@ Cheap to write, and it answers "who rejected this person and when" without a ded
 
 No login, no account. Email is the identifier.
 
-Routes: `/` lists open postings and describes the teams, `/apply` is the single form covering all of
-them.
+Routes: `/` describes the teams and their subteams and offers one Apply button, `/apply` is the
+single form covering all of them. **Revised 2026-08-16:** `/` no longer lists postings — see
+"'Posting' is an internal word" in §1 for why, and note that the page as built still does.
 
 ### Steps, in this order
 
@@ -324,7 +357,10 @@ it from the posting and never trusts the client's copy.**
 
 Revalidate against the live schema, flatten core + team questions into `question_schema_snapshot`,
 insert, send **one confirmation email**. With no accounts, that receipt is the applicant's only
-proof they applied.
+proof they applied. Designed in full in
+[the confirmation email design](./2026-08-16-confirmation-email-design.md) — one email per
+submission listing every team, sent after the transaction commits, and never able to fail the
+submission it is confirming.
 
 Spam control is a honeypot field plus a per-IP rate limit. No captcha until abuse is actually
 observed.
@@ -332,6 +368,16 @@ observed.
 ---
 
 ## 5. Admin experience
+
+### Postings
+
+A list of every posting the caller may see, under RLS — every one for an admin, their own team's for
+a lead — each with its title, team, and a **draft / open / closed control**. That control is the
+whole screen. There is no question editing and no create action; see §3.
+
+It matters because opening and closing recruitment is the one routine operation with a hard deadline
+attached, and the alternative is a migration and a deploy at the exact moment the person who can do
+that is writing exams.
 
 ### Board
 
@@ -560,24 +606,34 @@ database keeps is the unique index, because only the database can win a race.
 - **TypeScript + Next.js** (App Router), deployed on **Vercel**
 - **Supabase** — Postgres, auth (admin side only), storage
 - **FredDB** — cache for public posting reads, with Supabase fallback
-- **Tailwind v4** + shadcn/Radix, **dnd-kit**, **framer-motion**
-- **exceljs** for export, **Zod** for validation
+- **Tailwind v4** + shadcn/Radix, **dnd-kit**
+- **exceljs** for export, **Zod** for validation, **Resend** for the confirmation email
+
+`framer-motion` and `@tanstack/react-query` were both expected to arrive with the ported notes panel
+and neither did — the port dropped them. Corrected 2026-08-16 rather than left as an aspiration.
 
 ---
 
 ## 11. Open questions
 
-- Which email provider for the confirmation receipt (Resend is the obvious default on Vercel).
-- Whether `@tanstack/react-query` is adopted app-wide or confined to the ported notes component.
-- Concrete `config` shapes for the `matrix` and `ranking` question types.
-- Whether Sailbot recruits graduate students. If so, `year_of_study` wants `masters` and `phd`
-  rather than a single catch-all `grad`.
-- The seed list of common home departments (APSC, IGEN, MECH, ENPH, CPSC, …).
-- **A second file upload per question.** Software's technical quiz accepts either a public GitHub
-  URL or a ZIP upload, which the `file` question type currently does not model — the design assumed
-  one resume upload per submission and nothing else.
-- Whether the two "available in person every Saturday" confirmations (electrical and software, but
-  not mechanical) should become a core question, a per-team question, or stay duplicated.
+**All of the original ones are now closed** — most of them by the implementation rather than by a
+decision, which is why they are recorded here rather than deleted. Reviewed 2026-08-16.
+
+| Question | Answer |
+|---|---|
+| Email provider for the receipt | **Resend**, behind a one-function adapter. See the [confirmation email design](./2026-08-16-confirmation-email-design.md). |
+| `@tanstack/react-query` app-wide or not | **Neither — not adopted at all.** The notes panel was ported without it, and without `framer-motion`. |
+| `config` shapes for `matrix` and `ranking` | Settled in `lib/questions/types.ts` and the field components. |
+| Graduate students | Yes. `year_of_study` carries `masters` and `phd` (`components/apply/types.ts`). |
+| Home department seed list | Built, as a type-ahead combobox over a seed list that still accepts free text. |
+| A second file upload per question | Built. `quiz_zip` is a `file` question accepting `.zip`, validated by magic bytes and capped at 10MB, alongside the optional `github_url`. |
+| The two "available every Saturday" confirmations | Left duplicated as a per-team question on Electrical and Software. Mechanical does not ask it, so a core question would have put a promise in front of applicants nobody was asking it of. |
+
+Genuinely open, and new:
+
+- The sending address and reply-to for the confirmation email, and who holds DNS access to verify the
+  domain with Resend. This has a human dependency and a propagation delay, so it wants starting early.
+- Whether "within three weeks of applications closing" is a promise the team will stand behind.
 
 ---
 
@@ -585,6 +641,10 @@ database keeps is the unique index, because only the database can win a race.
 
 Automated interview scheduling, candidate accounts, server-side drafts, interactive puzzle
 questions, recruiting cycles, rejection and status-change emails, analytics.
+
+Added 2026-08-16: **the posting builder** — see §3 — and any applicant-facing use of the word
+"posting", including the landing page's "Open postings" listings, which are to disappear rather than
+be restyled.
 
 Each is recorded in [FUTURE_FEATURES.md](../FUTURE_FEATURES.md) with its reasoning and a trigger for
 reconsidering it.
