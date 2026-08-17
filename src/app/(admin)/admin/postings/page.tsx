@@ -1,11 +1,7 @@
+import { setPostingStatus } from '@/app/actions/set-posting-status';
 import { EmptyState } from '@/components/empty-state';
+import { PostingStatusControl } from '@/components/postings/status-control';
 import { createClient } from '@/lib/supabase/server';
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: 'Draft',
-  open: 'Open',
-  closed: 'Closed',
-};
 
 export default async function PostingsPage() {
   const supabase = await createClient();
@@ -22,14 +18,15 @@ export default async function PostingsPage() {
     <main className="flex-1 p-6">
       <h1 className="text-2xl font-semibold tracking-tight">Postings</h1>
       <p className="mt-3 text-base text-muted-foreground">
-        One posting per team. Opening a posting is what makes it visible to applicants.
+        One posting per team. Opening a posting is what makes it visible on the site and accepted by
+        the application form; closing it stops both immediately.
       </p>
 
       <div className="mt-8">
         {!postings || postings.length === 0 ? (
           <EmptyState
             title="No postings yet"
-            description="A posting carries a team's description and its questions. There is no way to create one from this screen yet, so for now they are added directly to the database."
+            description="A posting carries a team's description and its questions. Postings are authored as database migrations by design, so this screen opens and closes them rather than creating them."
           />
         ) : (
           <ul className="flex flex-col gap-4">
@@ -42,9 +39,14 @@ export default async function PostingsPage() {
                   {teamNamesById.get(posting.team_id) ?? 'Unassigned'}
                 </p>
                 <p className="mt-2 text-base font-medium">{posting.title}</p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {STATUS_LABELS[posting.status] ?? posting.status}
-                </p>
+                <div className="mt-4">
+                  <PostingStatusControl
+                    postingId={posting.id}
+                    title={posting.title}
+                    status={posting.status}
+                    action={setPostingStatus}
+                  />
+                </div>
               </li>
             ))}
           </ul>
