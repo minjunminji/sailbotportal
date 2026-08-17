@@ -383,9 +383,10 @@ tab on narrow screens.
 - **Header:** name, email as `mailto:`, year + program, ranked subteams in order, submitted date.
 - **Stage control:** a horizontal stepper across all eight stages, click to move. Shares one code
   path with the board drag.
-- **Prev/next navigation** with arrow buttons and `J`/`K`, walking the *currently filtered* set.
-  Reviewing forty applications should be forty keystrokes, not forty round trips through the board.
-  Filter state lives in the URL so the sequence survives a refresh.
+- **Prev/next navigation** with arrow buttons, walking the *currently filtered* set, so reviewing
+  forty applications is not forty round trips through the board. Filter state lives in the URL so
+  the sequence survives a refresh. **No `J`/`K` bindings** — a takeover that claims single-letter
+  keys has to defend them against every text input inside it. Escape is the only key it owns.
 
 ### Notes panel
 
@@ -406,8 +407,7 @@ Adaptations:
   decision arriving by import, and should be made deliberately.
 - On touch pointers, render an always-expanded panel rather than the FAB.
 
-**Keyboard guards required:** `J`/`K` prev/next must not fire while focus is in the note input, and
-Escape must close the pill first, the takeover on a second press.
+**Keyboard guard required:** Escape must close the pill first, the takeover on a second press.
 
 **Never place this component on kanban cards** — hover-expand and drag-and-drop fight badly.
 

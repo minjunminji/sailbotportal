@@ -203,11 +203,15 @@ Commit: "Add append-only notes panel ported from quick-add pill"
 
 **Files:** detail view components
 
-Arrow buttons plus `J`/`K`, walking the **currently filtered** set from the board. Reviewing forty
-applications should be forty keystrokes, not forty round trips.
+Arrow buttons walking the **currently filtered** set from the board, so reviewing forty applications
+is not forty round trips through it. Filter state lives in the URL, so the sequence survives a
+refresh and the arrows and the board agree on what the set is.
 
-**Keyboard guards required:** `J`/`K` must not fire while focus is in the note input, and Escape must
-close the notes pill first, the takeover on a second press.
+**No `J`/`K` bindings.** Considered and cut: the arrows already carry the whole workflow, and a
+takeover that owns single-letter keys has to defend them against every text input inside it — the
+note field first, then every future one. Escape is the only key this view claims.
+
+**Escape guard required:** Escape must close the notes pill first, the takeover on a second press.
 
 Commit: "Add prev/next application navigation"
 
