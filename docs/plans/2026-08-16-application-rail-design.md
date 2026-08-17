@@ -133,9 +133,13 @@ Digits get `tabular-nums` so the column does not jitter as it climbs.
 has no work left to do.
 
 States: untouched is `text-muted-foreground`; touched is `text-foreground`; active adds the indicator
-strip, `font-medium`, and a faint `bg-accent`; invalid turns the trailing status `text-destructive`
-**and replaces it with a word**. Colour alone would fail contrast checks and vanish for a colourblind
-applicant.
+strip, `font-medium`, and a faint `bg-accent`.
+
+**Invalid keeps its count and gains a marker.** As built, the trailing status turns
+`text-destructive` and a bordered `!` badge follows it, rather than the count being replaced by a
+word as first sketched — "needs attention" does not fit a 13rem rail beside a label, and the count
+is still worth reading while a section is being fixed. The badge is a glyph and a border, so the
+signal survives without colour; the announced name carries the words, ending "…, needs attention".
 
 ### Review lives in the rail footer
 
