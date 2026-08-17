@@ -38,25 +38,25 @@ it('links each section to its anchor on the page', () => {
   expect(screen.getByRole('link', { name: /Resume/ })).toHaveAttribute('href', '#resume-upload');
 });
 
-it('reads a count as a sentence rather than as loose digits', () => {
+it('reads a count as a sentence, even though nothing shows it on screen', () => {
   renderRail([section({ label: 'Mechanical', answered: 4, total: 11 })]);
 
-  // Visible as "4/11"; announced as something a person can parse.
+  // Announced for anyone hearing it; not shown for anyone seeing it.
   expect(screen.getByRole('link', { name: 'Mechanical, 4 of 11 answered' })).toBeInTheDocument();
-  expect(screen.getByText('4/11')).toBeInTheDocument();
+  expect(screen.queryByText('4/11')).not.toBeInTheDocument();
 });
 
-it('says a finished section is complete instead of counting it again', () => {
+it('marks a finished section with a checkmark and says it is complete', () => {
   renderRail([section({ label: 'Mechanical', answered: 11, total: 11 })]);
 
   expect(screen.getByRole('link', { name: 'Mechanical, complete' })).toBeInTheDocument();
-  // 11/11 has no work left to do, so the number goes away.
-  expect(screen.queryByText('11/11')).not.toBeInTheDocument();
+  expect(screen.getByText('✓')).toBeInTheDocument();
 });
 
-it('shows the count from zero, because it prices the section before you start', () => {
+it('shows nothing for a section that has not been started', () => {
   renderRail([section({ label: 'Mechanical', answered: 0, total: 11 })]);
-  expect(screen.getByText('0/11')).toBeInTheDocument();
+  expect(screen.queryByText('✓')).not.toBeInTheDocument();
+  expect(screen.queryByText('0/11')).not.toBeInTheDocument();
 });
 
 it('marks the section being read as current', () => {

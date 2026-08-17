@@ -68,6 +68,9 @@ function RailRow({
 }) {
   const complete = section.total > 0 && section.answered >= section.total;
 
+  // The active row is marked by weight alone (bold label), not by a fill or a
+  // border strip — nothing to keep aligned as the active row moves.
+  //
   // Built as one string rather than assembled from sibling elements. The
   // accessible name of an anchor is its children joined by spaces, which turns
   // a label and a fraction into "Mechanical 4 11" — and inserts a space before
@@ -86,26 +89,16 @@ function RailRow({
         // every section the scroll passes on the way.
         onClick={() => onNavigate?.(section.id)}
         className={[
-          'flex items-center gap-2 rounded-md py-1.5 pr-2 text-sm',
-          // The indicator strip is a left border on every row, coloured only on
-          // the active one, so nothing shifts sideways as the active row moves.
-          'border-l-2 pl-3',
-          active ? 'border-foreground bg-accent font-medium' : 'border-transparent',
-          section.answered > 0 || active ? 'text-foreground' : 'text-muted-foreground',
-          'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background',
+          'flex items-center gap-2 rounded-md py-1.5 pl-3 pr-2 text-sm',
+          active ? 'font-medium' : 'font-normal',
+          active ? 'text-foreground' : 'text-muted-foreground',
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         ].join(' ')}
       >
         <span className="flex-1 truncate">{section.label}</span>
 
         {/* Visible status. The sentence above is what gets announced. */}
-        <span
-          className={[
-            'shrink-0 text-xs tabular-nums',
-            section.invalid ? 'text-destructive' : 'text-muted-foreground',
-          ].join(' ')}
-        >
-          {complete ? '✓' : `${section.answered}/${section.total}`}
-        </span>
+        {complete ? <span className="shrink-0 text-xs text-muted-foreground">✓</span> : null}
 
         {section.invalid ? (
           // A word, not only a hue. Colour alone disappears for a colourblind
