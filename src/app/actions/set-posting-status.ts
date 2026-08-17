@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { cacheKeys, invalidate } from '@/lib/cache';
+import { POSTING_STATUS_VALUES } from '@/lib/postings/statuses';
 import { createClient } from '@/lib/supabase/server';
 
 /**
@@ -20,24 +21,19 @@ import { createClient } from '@/lib/supabase/server';
  * reason.
  */
 
-export type SetPostingStatusResult = { ok: true } | { ok: false; error: string };
-
 /**
- * A posting's own vocabulary, which has nothing to do with an application's.
- * Kept here rather than imported from the board so that `rejected` — a real
- * status for a candidate and nonsense for a posting — cannot leak across.
+ * Types are erased before the bundler sees them, so exporting one from a
+ * `'use server'` file is fine. Exporting a value is not — see
+ * `@/lib/postings/statuses`, which is where the status list lives for exactly
+ * that reason.
  */
-export const POSTING_STATUSES = ['draft', 'open', 'closed'] as const;
-
-export type PostingStatus = (typeof POSTING_STATUSES)[number];
-
-const VALID_STATUSES: readonly string[] = POSTING_STATUSES;
+export type SetPostingStatusResult = { ok: true } | { ok: false; error: string };
 
 export async function setPostingStatus(
   postingId: string,
   status: string,
 ): Promise<SetPostingStatusResult> {
-  if (!VALID_STATUSES.includes(status)) {
+  if (!POSTING_STATUS_VALUES.includes(status)) {
     // The check constraint would refuse this too, but it would surface as a
     // Postgres error string and this is a sentence.
     return { ok: false, error: 'That is not a status a posting can have.' };

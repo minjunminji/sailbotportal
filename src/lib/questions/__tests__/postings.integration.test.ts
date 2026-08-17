@@ -1,6 +1,7 @@
 /**
  * @jest-environment node
  */
+import { POSTING_STATUS_VALUES } from '@/lib/postings/statuses';
 import { adminClient } from '@/test/supabase-helpers';
 import { resolveQuestions } from '../snapshot';
 import { validateQuestion, validateQuestions } from '../validate';
@@ -82,9 +83,19 @@ describe('the three real postings exist', () => {
     expect(REAL_POSTING_SLUGS.map((slug) => posting(slug).position)).toEqual([0, 1, 2]);
   });
 
-  it('all three are drafts, so none of them is publicly visible yet', () => {
+  it('each carries a status the app recognises', () => {
+    // This used to assert all three were `draft`, which was a fact about the
+    // migration for as long as nothing could change it. The postings screen can
+    // now open and close them, so the current value is runtime state a lead
+    // owns — and asserting it here made an unrelated suite about transcribed
+    // JSON fail the moment anyone opened a posting locally.
+    //
+    // What is still worth checking is that the migration wrote a status the
+    // application can act on: a typo like 'opened' would sit in the column
+    // unnoticed, since it is plain text with a check constraint that a later
+    // migration could relax.
     for (const slug of REAL_POSTING_SLUGS) {
-      expect(posting(slug).status).toBe('draft');
+      expect(POSTING_STATUS_VALUES).toContain(posting(slug).status);
     }
   });
 

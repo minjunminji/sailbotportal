@@ -1,6 +1,7 @@
 'use client';
 
 import { startTransition, useOptimistic, useState } from 'react';
+import { POSTING_STATUSES } from '@/lib/postings/statuses';
 
 /**
  * Opens and closes one posting.
@@ -112,13 +113,3 @@ export function PostingStatusControl({
     </div>
   );
 }
-
-/**
- * In lifecycle order, which is also the order a posting moves through them.
- * `closed` last because it is where a posting ends and stays.
- */
-const POSTING_STATUSES = [
-  { value: 'draft', label: 'Draft' },
-  { value: 'open', label: 'Open' },
-  { value: 'closed', label: 'Closed' },
-] as const;
