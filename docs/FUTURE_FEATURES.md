@@ -120,3 +120,42 @@ Funnel conversion, time-in-stage, source tracking, reviewer-rating calibration.
 **Why deferred:** the Excel export covers ad-hoc questions in v1, and `application_events` already
 records the raw data these reports would need. Nothing is being lost by waiting — the history
 accumulates from day one.
+
+---
+
+## Drop the `draft` posting status
+
+**Status:** agreed, scheduled (2026-08-16). This is a removal, not a feature.
+
+Collapse `postings.status` from `draft | open | closed` to `open | closed`.
+
+**Why.** Nothing in the codebase distinguishes `draft` from `closed`. Every branch on posting status
+asks one question — is it `open`?
+
+- RLS: `using (status = 'open' or is_admin() or team_id = current_profile_team())`
+- `apply/page.tsx`: `.eq('status', 'open')`
+- `submit-application.ts` and `api/upload/route.ts`: both assert `status = 'open'`
+
+Grepping for code branching on `'closed'` returns one hit: its label in `POSTING_STATUSES`. So the
+control offers leads three options of which two are identical, and nothing signals that. A lead
+choosing Draft over Closed because it sounds safer is getting a placebo.
+
+`draft` is the state that protects an authoring phase, and there is no authoring in the app. Question
+sets arrive by migration and leads edit `question_schema` in Studio until a builder exists — and
+Studio does not care what status the row is in. The state was designed for a builder that was
+deliberately cut.
+
+**What is lost, and the cheaper fix.** `draft` is the only record of "never launched this term" as
+against "recruiting is over"; the `status_change_audit` trigger covers `applications`, not
+`postings`, so no history answers it. This shows up on a fresh database, where the seed lands all
+three postings non-open and three rows reading "Closed" claim recruiting finished when it never
+started. That is a wording problem on `/admin/postings`, not a state-machine one — an empty-state
+sentence costs less than a third status.
+
+**Why not done immediately:** it is a check-constraint migration plus `src/lib/postings/statuses.ts`
+plus roughly six integration test files that seed `'draft'` as their "not open" fixture. That churn
+runs through the submit path, and it was not worth burying the section-rail diff underneath it.
+
+**When it is done:** migrate existing `draft` rows to `closed`, change the check constraint, and add
+the empty-state line to `/admin/postings` in the same change — otherwise the regression above ships
+on its own.
